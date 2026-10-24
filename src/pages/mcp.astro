@@ -1,0 +1,278 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { asciiWord } from '../lib/ascii';
+
+type Genre = 'code' | 'design' | 'art' | 'docs' | 'data' | 'ops';
+
+interface Server {
+  name: string;
+  genre: Genre;
+  auth: 'none' | 'local' | 'key' | 'oauth';
+  desc: string;
+  cmd: string;
+  post?: string;
+}
+
+const servers: Server[] = [
+  {
+    name: 'Playwright',
+    genre: 'code',
+    auth: 'local',
+    desc: 'Browser automation over the accessibility tree: click, type, assert, screenshot. The default for checking a UI without a second agent.',
+    cmd: 'wombat mcp add playwright -- npx -y @playwright/mcp@latest',
+  },
+  {
+    name: 'Chrome DevTools',
+    genre: 'code',
+    auth: 'local',
+    desc: 'Traces, network waterfall, console and Lighthouse against a live Chrome. Use it for why a page is slow, not for clicking around.',
+    cmd: 'wombat mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest',
+  },
+  {
+    name: 'GitHub',
+    genre: 'code',
+    auth: 'key',
+    desc: 'Issues, pull requests, code search and review threads. The hosted endpoint takes a personal access token.',
+    cmd: "wombat mcp add github --url https://api.githubcopilot.com/mcp/ --header 'Authorization=Bearer ${GITHUB_TOKEN}'",
+  },
+  {
+    name: 'Context7',
+    genre: 'code',
+    auth: 'none',
+    desc: 'Version-accurate library documentation, so the model stops reciting the API from two years ago.',
+    cmd: 'wombat mcp add context7 --url https://mcp.context7.com/mcp',
+  },
+  {
+    name: 'Sentry',
+    genre: 'code',
+    auth: 'oauth',
+    desc: 'Issues, traces and releases from Sentry, scoped to the projects you authorize. Remote server, browser login.',
+    cmd: 'wombat mcp add sentry --url https://mcp.sentry.dev/mcp',
+    post: 'wombat mcp login sentry',
+  },
+  {
+    name: 'shadcn',
+    genre: 'code',
+    auth: 'local',
+    desc: 'Browse and install from any shadcn registry, including private registries declared in components.json.',
+    cmd: 'wombat mcp add shadcn -- npx shadcn@latest mcp',
+  },
+  {
+    name: 'Figma',
+    genre: 'design',
+    auth: 'oauth',
+    desc: 'Frames, variables and Code Connect mappings as structured context instead of a screenshot you re-guess.',
+    cmd: 'wombat mcp add figma --url https://mcp.figma.com/mcp',
+    post: 'wombat mcp login figma',
+  },
+  {
+    name: 'Storybook',
+    genre: 'design',
+    auth: 'local',
+    desc: 'Your real components, stories and test results, served by a running Storybook with @storybook/addon-mcp.',
+    cmd: 'wombat mcp add storybook --url http://localhost:6006/mcp',
+  },
+  {
+    name: 'Blender',
+    genre: 'art',
+    auth: 'local',
+    desc: 'Inspect scenes, set materials and trigger renders from the agent. Needs the mcp-for-blender addon running inside Blender.',
+    cmd: 'wombat mcp add blender -- uvx mcp-for-blender',
+  },
+  {
+    name: 'Notion',
+    genre: 'docs',
+    auth: 'oauth',
+    desc: 'Search and edit pages and databases. Useful when the spec lives in Notion and not in the repository.',
+    cmd: 'wombat mcp add notion --url https://mcp.notion.com/mcp',
+    post: 'wombat mcp login notion',
+  },
+  {
+    name: 'Exa',
+    genre: 'docs',
+    auth: 'key',
+    desc: 'Semantic web search and page contents. Pairs well with the built-in websearch when you need depth over breadth.',
+    cmd: 'wombat mcp add exa --url https://mcp.exa.ai/mcp',
+  },
+  {
+    name: 'Firecrawl',
+    genre: 'docs',
+    auth: 'key',
+    desc: 'Crawl, scrape and extract from sites at scale. Keyless search works; a key raises limits.',
+    cmd: 'wombat mcp add firecrawl --url https://mcp.firecrawl.dev/v2/mcp',
+  },
+  {
+    name: 'Brave Search',
+    genre: 'docs',
+    auth: 'key',
+    desc: 'Independent web, image and news index. A second opinion when a ranking looks wrong.',
+    cmd: 'wombat mcp add brave-search --env BRAVE_API_KEY=${BRAVE_API_KEY} -- npx -y @brave/brave-search-mcp-server',
+  },
+  {
+    name: 'Supabase',
+    genre: 'data',
+    auth: 'oauth',
+    desc: 'Query tables, run SQL and manage a project, scoped by the token you authorize. Read-only mode is worth turning on.',
+    cmd: 'wombat mcp add supabase --url https://mcp.supabase.com/mcp',
+    post: 'wombat mcp login supabase',
+  },
+  {
+    name: 'Postgres',
+    genre: 'data',
+    auth: 'local',
+    desc: 'Read-only SQL against a connection string. The reference server, still the quickest way in.',
+    cmd: 'wombat mcp add postgres -- npx -y @modelcontextprotocol/server-postgres postgresql://localhost/app',
+  },
+  {
+    name: 'Filesystem',
+    genre: 'data',
+    auth: 'local',
+    desc: 'Scoped file access outside the working directory. The path you pass is the whole world it can see.',
+    cmd: 'wombat mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem .',
+  },
+  {
+    name: 'Vercel',
+    genre: 'ops',
+    auth: 'oauth',
+    desc: 'Deployments, build logs and project settings, so a failed preview is one question away.',
+    cmd: 'wombat mcp add vercel --url https://mcp.vercel.com',
+    post: 'wombat mcp login vercel',
+  },
+  {
+    name: 'Linear',
+    genre: 'ops',
+    auth: 'oauth',
+    desc: 'Issues, cycles and projects. Attach the ticket to the session that fixes it.',
+    cmd: 'wombat mcp add linear --url https://mcp.linear.app/mcp',
+    post: 'wombat mcp login linear',
+  },
+];
+
+const genres: { id: 'all' | Genre; label: string }[] = [
+  { id: 'all', label: 'all' },
+  { id: 'code', label: 'code' },
+  { id: 'design', label: 'design' },
+  { id: 'art', label: 'art' },
+  { id: 'docs', label: 'docs' },
+  { id: 'data', label: 'data' },
+  { id: 'ops', label: 'ops' },
+];
+
+const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+---
+
+<Base
+  title="Wombat MCP catalog — code, design, art, docs, data, ops"
+  description="An example catalog of MCP servers for Wombat, grouped by genre, with the exact wombat mcp add command for each."
+>
+  <a class="skip" href="#main">Skip to content</a>
+  <Header active="mcp" />
+
+  <main id="main">
+    <section class="hero hero--docs wrap">
+      <p class="crumb"><a href="/">docs</a> / mcp catalog</p>
+      <h1 class="catalog-title">
+        <span class="sr-only">MCP catalog</span>
+        <span class="wordmark__art" aria-hidden="true">{asciiWord('mcp')}</span>
+      </h1>
+      <p class="tagline">Servers worth wiring in, by genre.</p>
+      <p class="lede">A working set of examples, not a required list. Every card carries the exact <code>wombat mcp add</code> command. Add two or three — each one puts its tool schemas in front of the model.</p>
+    </section>
+
+    <div class="wrap catalog-wrap">
+      <div class="filters" role="group" aria-label="Filter by genre">
+        {genres.map((genre, index) => (
+          <button
+            class="filter"
+            type="button"
+            data-filter={genre.id}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+          >
+            {genre.label}
+          </button>
+        ))}
+        <span class="count" id="count" aria-live="polite">{servers.length} servers</span>
+      </div>
+
+      <div class="catalog" id="catalog">
+        {servers.map((server) => (
+          <article class="server" data-genre={server.genre}>
+            <div class="server__head">
+              <h2>{server.name}</h2>
+              <span class="server__tag">{server.genre}</span>
+              <span class="server__auth">{server.auth}</span>
+            </div>
+            <p class="server__desc">{server.desc}</p>
+            <div class="codewrap codewrap--wrap">
+              <pre><code id={`cmd-${slug(server.name)}`}>{server.cmd}</code></pre>
+              <button class="copy" type="button" data-copy={`cmd-${slug(server.name)}`}>copy</button>
+            </div>
+            {server.post && (
+              <div class="codewrap codewrap--wrap">
+                <pre><code id={`login-${slug(server.name)}`}>{server.post}</code></pre>
+                <button class="copy" type="button" data-copy={`login-${slug(server.name)}`}>copy</button>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+
+      <div class="catalog-foot">
+        <p><strong>Already built in.</strong> Wombat ships <code>websearch</code>, <code>webfetch</code> and <code>imagesearch</code>, so you do not need an MCP server for ordinary search or page reads.</p>
+        <p><strong>Gate them.</strong> MCP tools default to <code>ask</code>. Keep it that way until you have watched a server work, and give read-only servers <code>--class read</code> so scouts can use them.</p>
+        <p><strong>Back to the docs.</strong> Install, permissions and the rest: <a href="/#start">start reading</a>.</p>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+
+  <script>
+    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.filter'));
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.server'));
+    const count = document.getElementById('count');
+
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const genre = button.dataset.filter ?? 'all';
+        let shown = 0;
+        buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+        cards.forEach((card) => {
+          const match = genre === 'all' || card.dataset.genre === genre;
+          card.hidden = !match;
+          if (match) shown += 1;
+        });
+        if (count) count.textContent = `${shown} server${shown === 1 ? '' : 's'}`;
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('.copy').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const target = document.getElementById(button.dataset.copy ?? '');
+        if (!target) return;
+        const text = target.textContent ?? '';
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          const field = document.createElement('textarea');
+          field.value = text;
+          field.setAttribute('readonly', '');
+          field.style.position = 'fixed';
+          field.style.opacity = '0';
+          document.body.appendChild(field);
+          field.select();
+          document.execCommand('copy');
+          field.remove();
+        }
+        button.textContent = 'copied';
+        button.dataset.done = 'true';
+        window.setTimeout(() => {
+          button.textContent = 'copy';
+          delete button.dataset.done;
+        }, 1600);
+      });
+    });
+  </script>
+</Base>

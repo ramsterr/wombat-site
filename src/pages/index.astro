@@ -1,0 +1,629 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { asciiWord } from '../lib/ascii';
+import wombatArt from '../data/wombat.txt?raw';
+
+const nav = [
+  { id: 'start', label: 'start', ascii: 'start' },
+  { id: 'configure', label: 'configure', ascii: 'configure' },
+  { id: 'permissions', label: 'permissions', ascii: 'permissions' },
+  { id: 'sessions', label: 'sessions', ascii: 'sessions' },
+  { id: 'mcp', label: 'mcp', ascii: 'mcp' },
+  { id: 'skills', label: 'skills', ascii: 'skills' },
+  { id: 'commands', label: 'commands', ascii: 'commands' },
+  { id: 'keys', label: 'keys', ascii: 'keys' },
+  { id: 'themes', label: 'themes', ascii: 'themes' },
+  { id: 'troubleshooting', label: 'troubleshooting', ascii: 'troubleshoot' },
+];
+
+const mcpServers = [
+  {
+    name: 'Playwright',
+    tag: 'browser',
+    cmd: 'wombat mcp add playwright -- npx -y @playwright/mcp@latest',
+    desc: 'Accessibility-tree browser automation: click, type, assert, screenshot. The default pick for checking a UI without a second agent.',
+  },
+  {
+    name: 'Chrome DevTools',
+    tag: 'performance',
+    cmd: 'wombat mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest',
+    desc: 'Traces, network waterfall, console and Lighthouse against a live Chrome. Use it for why a page is slow, not for clicking around.',
+  },
+  {
+    name: 'GitHub',
+    tag: 'repo',
+    cmd: 'wombat mcp add github --env GITHUB_TOKEN=<token> -- npx -y @modelcontextprotocol/server-github',
+    desc: 'Issues, pull requests and code search without leaving the session. Pair it with a read-only class for delegated scouts.',
+  },
+  {
+    name: 'Context7',
+    tag: 'docs',
+    cmd: 'wombat mcp add context7 --url https://mcp.context7.com/mcp',
+    desc: 'Version-accurate library documentation, so the model stops reciting the API from two years ago.',
+  },
+  {
+    name: 'Figma',
+    tag: 'design',
+    cmd: 'wombat mcp add figma --url https://mcp.figma.com/mcp',
+    desc: 'Frames, variables and Code Connect mappings as structured context. Run <code>wombat mcp login figma</code> once, then <code>wombat mcp test figma</code>.',
+  },
+  {
+    name: 'shadcn',
+    tag: 'components',
+    cmd: 'wombat mcp add shadcn -- npx shadcn@latest mcp',
+    desc: 'Browse and install from any shadcn registry, including private registries declared in components.json.',
+  },
+  {
+    name: 'Storybook',
+    tag: 'design system',
+    cmd: 'wombat mcp add storybook --url http://localhost:6006/mcp',
+    desc: 'Your real components, stories and test results, served by a running Storybook with <code>@storybook/addon-mcp</code>. Better than Figma once you have a library.',
+  },
+];
+
+const skills = [
+  {
+    name: 'frontend-design',
+    tag: 'taste',
+    src: 'anthropics/skills',
+    cmd: 'npx skills add anthropics/skills -g -s frontend-design',
+    desc: 'Forces a design direction, a type scale and a token system before any code, and names the templated looks to avoid. The single biggest jump for greenfield UI.',
+  },
+  {
+    name: 'web-design-guidelines',
+    tag: 'review',
+    src: 'vercel-labs/agent-skills',
+    cmd: 'npx skills add vercel-labs/agent-skills -g -s web-design-guidelines',
+    desc: 'Audits existing UI against the Web Interface Guidelines and returns terse file:line findings. Bad at generating, good at catching.',
+  },
+  {
+    name: 'webapp-testing',
+    tag: 'verify',
+    src: 'anthropics/skills',
+    cmd: 'npx skills add anthropics/skills -g -s webapp-testing',
+    desc: 'Playwright scripts plus a server helper, so an agent can verify a local app without an MCP server. Needs Python Playwright and Chromium.',
+  },
+  {
+    name: 'theme-factory',
+    tag: 'palette',
+    src: 'anthropics/skills',
+    cmd: 'npx skills add anthropics/skills -g -s theme-factory',
+    desc: 'Ten palettes with matched font pairings for decks, docs and landing pages, plus a showcase PDF.',
+  },
+  {
+    name: 'vercel-react-best-practices',
+    tag: 'react',
+    src: 'vercel-labs/agent-skills',
+    cmd: 'npx skills add vercel-labs/agent-skills -g -s vercel-react-best-practices',
+    desc: 'Performance rules for React and Next.js: data fetching, bundle size, rendering boundaries.',
+  },
+  {
+    name: 'vercel-react-view-transitions',
+    tag: 'motion',
+    src: 'vercel-labs/agent-skills',
+    cmd: 'npx skills add vercel-labs/agent-skills -g -s vercel-react-view-transitions',
+    desc: 'Page, route and shared-element motion with the View Transition API, without a third-party animation library.',
+  },
+];
+
+const commands = [
+  { cmd: 'wombat', desc: 'open the chat UI' },
+  { cmd: 'wombat run "<task>"', desc: 'run one task and exit' },
+  { cmd: 'wombat run -c "<task>"', desc: 'continue the latest session' },
+  { cmd: 'wombat resume [id|last]', desc: 'reopen a session' },
+  { cmd: 'wombat sessions', desc: 'list sessions for this directory' },
+  { cmd: 'wombat setup', desc: 'change provider, key or model' },
+  { cmd: 'wombat models [provider]', desc: 'list available models' },
+  { cmd: 'wombat doctor', desc: 'diagnose config and connectivity' },
+  { cmd: 'wombat config', desc: 'show config, with keys redacted' },
+  { cmd: 'wombat config set <key> <value>', desc: 'change one setting' },
+  { cmd: 'wombat mcp add|list|test', desc: 'add and check MCP servers' },
+  { cmd: 'wombat mcp login|logout', desc: 'sign in to an OAuth MCP server' },
+  { cmd: 'wombat checkpoint list', desc: 'list shadow-git checkpoints' },
+  { cmd: 'wombat checkpoint restore <id>', desc: 'restore a checkpoint' },
+  { cmd: 'wombat upgrade', desc: 'install the latest stable release' },
+  { cmd: 'wombat version', desc: 'print the version' },
+];
+
+const keys = [
+  { keys: ['/'], label: 'command palette' },
+  { keys: ['@'], label: 'file picker with tab completion' },
+  { keys: ['ctrl', 'o'], label: 'open the newest preview' },
+  { keys: ['ctrl', 'b'], label: 'toggle the inspector' },
+  { keys: ['ctrl', 't'], label: 'cycle themes' },
+  { keys: ['ctrl', 'r'], label: 'add a project reference' },
+  { keys: ['ctrl', 'y'], label: 'copy the last reply' },
+  { keys: ['ctrl', 'p'], label: 'previous prompt' },
+  { keys: ['alt', '1–5'], label: 'jump between panels' },
+  { keys: ['esc'], label: 'stop the current run' },
+  { keys: ['?'], label: 'full key map' },
+  { keys: ['ctrl', 'c'], label: 'quit' },
+];
+
+const mcpJson = `{
+  "mcp_servers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "class": "read"
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": { "Authorization": "Bearer \${CONTEXT7_API_KEY}" }
+    }
+  }
+}`;
+
+const themes = [
+  { name: 'monokai', bg: '#272822', fg: '#f8f8f2', accent: '#a6e22e' },
+  { name: 'wombat', bg: '#0b0b0b', fg: '#e6e0d0', accent: '#f2b23e' },
+  { name: 'tokyo', bg: '#1a1b26', fg: '#c0caf5', accent: '#7aa2f7' },
+  { name: 'catppuccin', bg: '#1e1e2e', fg: '#cdd6f4', accent: '#cba6f7' },
+  { name: 'gruvbox', bg: '#282828', fg: '#ebdbb2', accent: '#d79921' },
+  { name: 'nord', bg: '#2e3440', fg: '#d8dee9', accent: '#88c0d0' },
+  { name: 'rosepine', bg: '#191724', fg: '#e0def4', accent: '#ebbcba' },
+  { name: 'dracula', bg: '#282a36', fg: '#f8f8f2', accent: '#ff79c6' },
+  { name: 'everforest', bg: '#2d353b', fg: '#d3c6aa', accent: '#a7c080' },
+  { name: 'kanagawa', bg: '#1f1f28', fg: '#dcd7ba', accent: '#7e9cd8' },
+  { name: 'solarized', bg: '#002b36', fg: '#93a1a1', accent: '#b58900' },
+  { name: 'iceberg', bg: '#161821', fg: '#c6c8d1', accent: '#84a0c6' },
+  { name: 'nightfox', bg: '#192330', fg: '#cdcecf', accent: '#719cd6' },
+  { name: 'onedark', bg: '#282c34', fg: '#abb2bf', accent: '#98c379' },
+  { name: 'github', bg: '#0d1117', fg: '#c9d1d9', accent: '#58a6ff' },
+];
+---
+
+<Base
+  title="Wombat docs — install, configure, MCP and skills"
+  description="Documentation for Wombat: install, providers, permissions, sessions, MCP servers, agent skills, commands, keys and troubleshooting."
+>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <Header active="docs" />
+
+  <main id="main">
+    <section class="hero hero--docs wrap">
+      <div class="hero__grid">
+        <figure class="art">
+          <pre aria-hidden="true">{wombatArt}</pre>
+          <figcaption>the banner, drawn in 88 columns</figcaption>
+        </figure>
+
+        <div class="hero__copy">
+          <h1 class="wordmark">
+            <span class="sr-only">Wombat documentation</span>
+            <span class="wordmark__art" aria-hidden="true">{asciiWord('wombat')}</span>
+          </h1>
+          <p class="tagline">Docs, and the servers worth wiring into it.</p>
+          <p class="lede">Install, configure, gate permissions, run a fleet, attach MCP servers and skills. Everything below is the current <code>main</code>.</p>
+
+          <div class="cmd">
+            <span class="cmd__sigil" aria-hidden="true">$</span>
+            <code id="install-one">curl -fsSL https://raw.githubusercontent.com/ramsterr/Wombat/main/install.sh | bash</code>
+            <button class="copy" type="button" data-copy="install-one">copy</button>
+          </div>
+
+          <dl class="meta">
+            <div><dt>release</dt><dd>v0.2.6</dd></div>
+            <div><dt>build</dt><dd>Go 1.26.3+</dd></div>
+            <div><dt>license</dt><dd>MIT</dd></div>
+            <div><dt>runtime</dt><dd>none</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <div class="docs wrap">
+      <aside class="side">
+        <p class="side__title">on this page</p>
+        <nav aria-label="Documentation">
+          <ol>
+            {nav.map((item) => (
+              <li><a href={`#${item.id}`}>{item.label}</a></li>
+            ))}
+          </ol>
+        </nav>
+        <p class="side__foot">Last matched to <code>main</code> and release v0.2.6, 22 October 2026.</p>
+        <p class="side__foot"><a href="/mcp">MCP catalog →</a></p>
+      </aside>
+
+      <div class="doc">
+        <section id="start">
+          <div class="doc__head">
+            <h2 class="sr-only">Start</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('start')}</pre>
+          </div>
+          <p>Wombat ships as one binary. Install from <code>main</code>: tagged releases can sit behind the branch, and the branch is where the features in these docs actually live.</p>
+
+          <div class="codewrap">
+            <pre><code id="code-install"># current main — recommended
+go install github.com/ramsterr/Wombat/cmd/wombat@main
+wombat setup
+
+# or build the branch from a checkout
+git clone --depth 1 --single-branch --no-tags https://github.com/ramsterr/Wombat.git
+cd Wombat
+go build -o wombat ./cmd/wombat
+
+# latest tagged release — can lag behind main
+curl -fsSL https://raw.githubusercontent.com/ramsterr/Wombat/main/install.sh | bash</code></pre>
+            <button class="copy" type="button" data-copy="code-install">copy</button>
+          </div>
+          <p>The first two need Go 1.26.3+ and nothing else. Homebrew (<code>brew install ramsterr/wombat/wombat</code>) installs the tagged release too.</p>
+
+          <h3>First run</h3>
+          <div class="codewrap">
+            <pre><code id="code-first">wombat setup    # provider, key, model
+wombat doctor   # config, permissions, connectivity
+wombat          # chat UI</code></pre>
+            <button class="copy" type="button" data-copy="code-first">copy</button>
+          </div>
+          <p><code>setup</code> runs automatically on first launch and saves the provider, model and key to <code>~/.wombat/config.json</code>.</p>
+
+          <h3>Without the UI</h3>
+          <div class="codewrap">
+            <pre><code id="code-run">wombat run "summarize this repository and find the test command"
+wombat run --yolo "fix the failing tests and explain the change"</code></pre>
+            <button class="copy" type="button" data-copy="code-run">copy</button>
+          </div>
+
+          <div class="note"><strong>Windows.</strong> Install WSL2 with <code>wsl --install</code>, then run the macOS/Linux command inside Ubuntu. Git Bash works for the native build, but the <code>bash</code> tool needs a POSIX <code>sh</code>.</div>
+          <div class="note"><strong>Upgrades.</strong> <code>wombat upgrade</code> installs the latest tagged release, which moves a <code>main</code> build back to the last tag. To stay on the branch, rerun the <code>go install ...@main</code> line.</div>
+        </section>
+
+        <section id="configure">
+          <div class="doc__head">
+            <h2 class="sr-only">Configure</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('configure')}</pre>
+          </div>
+          <p>Everything lives in <code>~/.wombat/config.json</code>. <code>wombat config</code> prints it with keys redacted; <code>wombat config set</code> changes one value at a time.</p>
+
+          <div class="codewrap">
+            <pre><code id="code-config">wombat config
+wombat config set provider openai
+wombat config set model gpt-5
+wombat config set fallback_models gpt-5-mini
+wombat config set scout_model gpt-5-mini</code></pre>
+            <button class="copy" type="button" data-copy="code-config">copy</button>
+          </div>
+
+          <h3>Providers</h3>
+          <ul>
+            <li>OpenAI-compatible APIs, including self-hosted gateways</li>
+            <li>Anthropic</li>
+            <li>OpenCode</li>
+            <li>Local model servers</li>
+          </ul>
+          <p>Keys can also come from the environment — <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code> and so on — which keeps them out of the config file.</p>
+
+          <h3>Settings that change behaviour</h3>
+          <div class="codewrap">
+            <pre><code id="code-settings">wombat config set worker_full_access false
+wombat config set review_writers false
+wombat config set check_policy auto      # auto | worktree | merge | both
+wombat config set review_policy always   # always | auto | never
+wombat config set max_parallel_scouts 5
+wombat config set max_parallel_writers 3</code></pre>
+            <button class="copy" type="button" data-copy="code-settings">copy</button>
+          </div>
+        </section>
+
+        <section id="permissions">
+          <div class="doc__head">
+            <h2 class="sr-only">Permissions</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('permissions')}</pre>
+          </div>
+          <p>Permissions are gated per class, not per tool. Each gate can be <code>allow</code>, <code>ask</code> or <code>deny</code>, and MCP can be gated per server.</p>
+          <ul>
+            <li><code>bash</code></li>
+            <li><code>writes</code> and <code>edits</code></li>
+            <li><code>network</code></li>
+            <li><code>sensitive reads</code></li>
+            <li><code>mcp</code>, falling back to <code>mcp:&lt;server&gt;</code></li>
+          </ul>
+
+          <div class="codewrap">
+            <pre><code id="code-perms">wombat config set permissions.bash ask
+wombat config set permissions.mcp allow
+wombat config set permissions.mcp:github ask</code></pre>
+            <button class="copy" type="button" data-copy="code-perms">copy</button>
+          </div>
+          <div class="note"><strong>--yolo</strong> auto-approves tool permissions for one run. Use it for trusted, non-interactive jobs, never for a repository you have not read.</div>
+        </section>
+
+        <section id="sessions">
+          <div class="doc__head">
+            <h2 class="sr-only">Sessions and checkpoints</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('sessions')}</pre>
+          </div>
+          <p>Sessions are stored as JSONL transcripts and scoped to a directory. Checkpoints are shadow-git snapshots, so a bad edit is one command away from gone.</p>
+
+          <div class="codewrap">
+            <pre><code id="code-sessions">wombat sessions
+wombat resume last
+wombat run -c "keep going"
+wombat checkpoint list
+wombat checkpoint restore &lt;id&gt;</code></pre>
+            <button class="copy" type="button" data-copy="code-sessions">copy</button>
+          </div>
+        </section>
+
+        <section id="mcp">
+          <div class="doc__head">
+            <h2 class="sr-only">MCP servers</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('mcp')}</pre>
+          </div>
+          <p>Wombat is an MCP client for local stdio servers and remote Streamable HTTP/SSE servers. Their tools appear to the agent as <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>, and each server can hold its own permission gate.</p>
+
+          <div class="codewrap">
+            <pre><code id="code-mcp">wombat mcp add playwright -- npx -y @playwright/mcp@latest
+wombat mcp add context7 --url https://mcp.context7.com/mcp
+wombat mcp test playwright
+wombat mcp list</code></pre>
+            <button class="copy" type="button" data-copy="code-mcp">copy</button>
+          </div>
+
+          <h3>OAuth servers</h3>
+          <div class="codewrap">
+            <pre><code id="code-oauth">wombat mcp add notion --url https://mcp.notion.com/mcp
+wombat mcp login notion
+wombat mcp test notion</code></pre>
+            <button class="copy" type="button" data-copy="code-oauth">copy</button>
+          </div>
+          <p>Login opens a browser, completes a loopback callback with PKCE and state checks, and stores tokens in <code>~/.wombat/mcp-auth/</code> with <code>0600</code> permissions. They refresh automatically.</p>
+
+          <h3>In the config file</h3>
+          <div class="codewrap">
+            <pre><code id="code-mcpjson">{mcpJson}</code></pre>
+            <button class="copy" type="button" data-copy="code-mcpjson">copy</button>
+          </div>
+          <p><code>$&#123;VAR&#125;</code>, <code>$&#123;VAR:-default&#125;</code> and <code>&#123;env:VAR&#125;</code> expand when the server starts, so secrets stay in the environment. <code>--class read</code> lets delegated scouts use a read-only server; everything else stays lead-only unless you pass <code>--workers</code>.</p>
+          <div class="note"><strong>Local servers run as you, with your environment.</strong> Only add servers you trust, and gate them at <code>ask</code> until you have watched them work.</div>
+
+          <h3>Example servers</h3>
+          <p>These are examples, not a required set — pick by the work in front of you. The <a href="/mcp">MCP catalog</a> sorts more of them by genre: code, design, art, docs, data and ops.</p>
+          <p>Add two or three, not seven. Every server puts its tool schemas in front of the model, and past that the choice of tool starts getting worse.</p>
+
+          <div class="recs">
+            {mcpServers.map((server, index) => (
+              <article class="rec">
+                <div class="rec__head">
+                  <h3>{server.name}</h3>
+                  <span class="rec__tag">{server.tag}</span>
+                </div>
+                <p set:html={server.desc} />
+                <div class="codewrap codewrap--wrap">
+                  <pre><code id={`mcp-${index}`}>{server.cmd}</code></pre>
+                  <button class="copy" type="button" data-copy={`mcp-${index}`}>copy</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="skills">
+          <div class="doc__head">
+            <h2 class="sr-only">Skills</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('skills')}</pre>
+          </div>
+          <p>A skill is a folder with a <code>SKILL.md</code> and optional scripts. The agent reads the description at startup and loads the body only when the task matches, so a library of skills costs almost nothing until one is used. Install them with the skills CLI; they land in <code>~/.agents/skills</code> and symlink into each agent that supports them.</p>
+
+          <div class="codewrap">
+            <pre><code id="code-skills">npx skills add anthropics/skills -g -s frontend-design
+npx skills add vercel-labs/agent-skills -g -s web-design-guidelines
+npx skills ls -g</code></pre>
+            <button class="copy" type="button" data-copy="code-skills">copy</button>
+          </div>
+          <p>Drop <code>-g</code> to install into a project's <code>.agents/skills</code> instead of your user directory. Skills run with the same permissions as the agent, so read one before you install it.</p>
+
+          <div class="note"><strong>Skills vs MCP.</strong> A skill is instruction and taste. An MCP server is reach. Install skills to change how the agent decides, MCP servers to change what it can touch.</div>
+
+          <div class="recs">
+            {skills.map((skill, index) => (
+              <article class="rec">
+                <div class="rec__head">
+                  <h3>{skill.name}</h3>
+                  <span class="rec__tag">{skill.tag}</span>
+                  <span class="rec__src">{skill.src}</span>
+                </div>
+                <p>{skill.desc}</p>
+                <div class="codewrap codewrap--wrap">
+                  <pre><code id={`skill-${index}`}>{skill.cmd}</code></pre>
+                  <button class="copy" type="button" data-copy={`skill-${index}`}>copy</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="commands">
+          <div class="doc__head">
+            <h2 class="sr-only">Commands</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('commands')}</pre>
+          </div>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr><th scope="col">command</th><th scope="col">what it does</th></tr>
+              </thead>
+              <tbody>
+                {commands.map((row) => (
+                  <tr><td><code>{row.cmd}</code></td><td>{row.desc}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p>Inside the chat, slash commands cover the rest: <code>/model</code>, <code>/configure</code>, <code>/theme</code>, <code>/sources</code>, <code>/preview</code>, <code>/cost</code>, <code>/compact</code>, <code>/copy</code>.</p>
+        </section>
+
+        <section id="keys">
+          <div class="doc__head">
+            <h2 class="sr-only">Keys</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('keys')}</pre>
+          </div>
+          <ul class="keylist">
+            {keys.map((key) => (
+              <li>
+                <span class="keyset">
+                  {key.keys.map((k) => <kbd>{k}</kbd>)}
+                </span>
+                <span>{key.label}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section id="themes">
+          <div class="doc__head">
+            <h2 class="sr-only">Themes</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('themes')}</pre>
+          </div>
+          <p>Fifteen palettes ship in the binary. In the app, <code>/theme</code> opens the picker, <code>ctrl+t</code> cycles, and the terminal background is tinted while Wombat runs and restored on exit.</p>
+
+          <div class="themes">
+            <div class="picker" role="group" aria-label="Theme">
+              {themes.map((theme, index) => (
+                <button
+                  class="theme"
+                  type="button"
+                  aria-pressed={index === 0 ? 'true' : 'false'}
+                  data-name={theme.name}
+                  data-bg={theme.bg}
+                  data-fg={theme.fg}
+                  data-accent={theme.accent}
+                >
+                  <span class="chips" aria-hidden="true">
+                    <i style={`background:${theme.bg}`}></i>
+                    <i style={`background:${theme.fg}`}></i>
+                    <i style={`background:${theme.accent}`}></i>
+                  </span>
+                  {theme.name}
+                </button>
+              ))}
+            </div>
+
+            <div class="term" id="term">
+              <div class="term__bar">
+                <span>wombat</span>
+                <span>v0.2.6</span>
+              </div>
+              <div class="term__body">
+                <p><span class="k">model</span><span>claude-sonnet-4.5</span></p>
+                <p><span class="k">theme</span><span id="term-theme">monokai</span></p>
+                <p><span class="k">context</span><span><span class="meter" aria-hidden="true">####--------</span> 38%</span></p>
+                <p><span class="k">preview</span><span>localhost:5173 · ready</span></p>
+                <p class="term__prompt"><span class="sigil" aria-hidden="true">&gt;</span> fix the failing tests<i class="caret" aria-hidden="true"></i></p>
+              </div>
+              <p class="term__hint" id="term-hint" aria-live="polite">monokai</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="troubleshooting">
+          <div class="doc__head">
+            <h2 class="sr-only">Troubleshooting</h2>
+            <pre class="ascii-title" aria-hidden="true">{asciiWord('troubleshoot')}</pre>
+          </div>
+          <dl class="faq">
+            <div>
+              <dt>wombat: command not found</dt>
+              <dd>Add <code>~/.local/bin</code> to <code>PATH</code>, or run the binary by its full path. <code>go install</code> writes to <code>$(go env GOPATH)/bin</code>.</dd>
+            </div>
+            <div>
+              <dt>No provider or model</dt>
+              <dd>Run <code>wombat setup</code>, then <code>wombat doctor</code>. Both are safe to re-run.</dd>
+            </div>
+            <div>
+              <dt>Writers fail with “main workspace has tracked changes”</dt>
+              <dd>Workers use git worktrees and need a clean tracked tree. Commit or stash first.</dd>
+            </div>
+            <div>
+              <dt>Connection reset by peer</dt>
+              <dd>Wombat retries transient errors with backoff, including mid-stream, and asks the model to continue when provider retries run out. If it still fails, check your network, proxy or VPN.</dd>
+            </div>
+            <div>
+              <dt>An upgrade replaced my source build</dt>
+              <dd><code>wombat upgrade</code> installs the latest tagged release. Rebuild from source to stay on <code>main</code>.</dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>('.copy').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const target = document.getElementById(button.dataset.copy ?? '');
+        if (!target) return;
+        const text = target.textContent ?? '';
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          const field = document.createElement('textarea');
+          field.value = text;
+          field.setAttribute('readonly', '');
+          field.style.position = 'fixed';
+          field.style.opacity = '0';
+          document.body.appendChild(field);
+          field.select();
+          document.execCommand('copy');
+          field.remove();
+        }
+        button.textContent = 'copied';
+        button.dataset.done = 'true';
+        window.setTimeout(() => {
+          button.textContent = 'copy';
+          delete button.dataset.done;
+        }, 1600);
+      });
+    });
+
+    const term = document.getElementById('term');
+    const termTheme = document.getElementById('term-theme');
+    const termHint = document.getElementById('term-hint');
+    const themeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.theme'));
+
+    themeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const { name, bg, fg, accent } = button.dataset;
+        if (!name || !bg || !fg || !accent || !term) return;
+        term.style.setProperty('--t-bg', bg);
+        term.style.setProperty('--t-fg', fg);
+        term.style.setProperty('--t-accent', accent);
+        if (termTheme) termTheme.textContent = name;
+        if (termHint) termHint.textContent = `${name} theme selected`;
+        themeButtons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+      });
+    });
+
+    const sideLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.side a')).filter(
+      (link) => link.hash,
+    );
+    const sections = sideLinks
+      .map((link) => document.querySelector<HTMLElement>(link.hash))
+      .filter((section): section is HTMLElement => Boolean(section));
+
+    if ('IntersectionObserver' in window && sections.length) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            sideLinks.forEach((link) => {
+              if (link.hash === `#${entry.target.id}`) link.setAttribute('aria-current', 'true');
+              else link.removeAttribute('aria-current');
+            });
+          });
+        },
+        { rootMargin: '-40% 0px -55% 0px' },
+      );
+      sections.forEach((section) => observer.observe(section));
+    }
+  </script>
+</Base>
