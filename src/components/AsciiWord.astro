@@ -1,0 +1,23 @@
+---
+import { asciiArt } from '../lib/ascii';
+
+interface Props {
+  text: string;
+  class?: string;
+}
+
+const { text, class: className } = Astro.props;
+const art = asciiArt(text);
+---
+
+<svg
+  class={className}
+  viewBox={`0 0 ${art.cols} ${art.rows}`}
+  style={`--cols:${art.cols};--rows:${art.rows}`}
+  shape-rendering="crispEdges"
+  preserveAspectRatio="xMinYMin meet"
+  focusable="false"
+  aria-hidden="true"
+>
+  <path d={art.path} fill="currentColor"></path>
+</svg>

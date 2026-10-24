@@ -37,21 +37,46 @@ const GLYPHS: Record<string, string[]> = {
   '9': ['.###.', '#...#', '.####', '....#', '.###.'],
   '-': ['.....', '.....', '#####', '.....', '.....'],
   '.': ['.....', '.....', '.....', '.....', '..#..'],
-  ' ': ['  ', '  ', '  ', '  ', '  '],
+  ' ': ['.....', '.....', '.....', '.....', '.....'],
 };
 
-export function asciiWord(text: string, fill = "█"): string {
-  const chars = [...text.toUpperCase()];
-  const rows: string[] = ['', '', '', '', ''];
+const GLYPH_COLS = 5;
+const GLYPH_GAP = 1;
+const GLYPH_ROWS = 5;
 
-  chars.forEach((char, index) => {
-    const glyph = GLYPHS[char] ?? GLYPHS[' '];
-    for (let row = 0; row < 5; row += 1) {
-      rows[row] += (index > 0 ? ' ' : '') + glyph[row];
-    }
+/* Each cell is one unit wide and 1.4 tall, matching the line box the art
+   used when it was rendered as block characters. The ink covers 83% of the
+   cell height, which leaves the same hairline gap between rows. */
+const CELL_H = 1.4;
+const INK_H = 1.1667;
+const INK_Y = (CELL_H - INK_H) / 2;
+
+export interface AsciiArt {
+  cols: number;
+  rows: number;
+  path: string;
+}
+
+export function asciiArt(text: string): AsciiArt {
+  const glyphs = [...text.toUpperCase()].map((char) => GLYPHS[char] ?? GLYPHS[' ']);
+  const cols = glyphs.length * (GLYPH_COLS + GLYPH_GAP) - GLYPH_GAP;
+  const commands: string[] = [];
+
+  glyphs.forEach((glyph, index) => {
+    const originX = index * (GLYPH_COLS + GLYPH_GAP);
+    glyph.forEach((row, y) => {
+      [...row].forEach((cell, x) => {
+        if (cell !== '#') return;
+        const px = originX + x;
+        const py = y * CELL_H + INK_Y;
+        commands.push(`M${px} ${py.toFixed(4)}h1v${INK_H}h-1z`);
+      });
+    });
   });
 
-  return rows
-    .map((row) => row.replace(/\s+$/, '').replaceAll('.', ' ').replaceAll('#', fill))
-    .join('\n');
+  return {
+    cols,
+    rows: GLYPH_ROWS * CELL_H,
+    path: commands.join(''),
+  };
 }

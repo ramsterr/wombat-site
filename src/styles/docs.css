@@ -4,7 +4,8 @@
 }
 
 .hero--docs .art pre {
-  font-size: clamp(6.6px, 0.92vw, 10.8px);
+  font-size: 10.8px;
+  font-size: min(10.8px, 1.71cqw);
 }
 
 .hero--docs .art figcaption {
@@ -82,6 +83,10 @@
 }
 
 /* ---------- doc sections ---------- */
+.doc {
+  min-width: 0;
+}
+
 .doc section {
   padding-block: clamp(30px, 3.8vw, 46px);
   border-top: 1px solid var(--rule);
@@ -290,7 +295,7 @@
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
   .docs {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
   }
 
@@ -333,15 +338,37 @@
   .side__foot {
     display: none;
   }
-
-  .hero--docs .art pre {
-    font-size: clamp(5.9px, 1.32vw, 8.4px);
-  }
 }
 
 @media (max-width: 620px) {
   .rec {
     padding: 13px 14px;
+  }
+
+  .codewrap pre {
+    scrollbar-width: thin;
+  }
+
+  .codewrap::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 22px;
+    background: linear-gradient(90deg, transparent, var(--bg-1) 75%);
+    pointer-events: none;
+  }
+
+  .codewrap pre::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .codewrap pre::-webkit-scrollbar-thumb {
+    background: var(--rule-strong);
+  }
+
+  .doc p,
+  .doc li {
+    font-size: 13.5px;
   }
 }
 
@@ -351,13 +378,9 @@
 }
 
 .brand-ascii {
-  display: block;
-  color: var(--green);
-  font-size: 8px;
-  line-height: 0.84;
-  letter-spacing: 0;
-  white-space: pre;
-  text-shadow: 0 0 14px rgba(166, 226, 46, 0.2);
+  --cell: 4.6px;
+  width: min(calc(var(--cols) * var(--cell)), 34vw);
+  filter: drop-shadow(0 0 14px rgba(166, 226, 46, 0.2));
   transition: color 0.18s var(--ease);
 }
 
@@ -386,8 +409,8 @@
 }
 
 .catalog-title .wordmark__art {
-  font-size: clamp(20px, 3.2vw, 32px);
-  line-height: 1.02;
+  --cell: 19px;
+  height: auto;
 }
 
 .catalog-wrap {
@@ -534,10 +557,6 @@
 
   .count {
     margin-left: 0;
-  }
-
-  .brand-ascii {
-    font-size: 6px;
   }
 }
 

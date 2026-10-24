@@ -1,10 +1,10 @@
 ---
-import { asciiWord } from '../lib/ascii';
+import AsciiWord from './AsciiWord.astro';
 ---
 
 <footer class="foot">
   <div class="foot__in wrap">
-    <div class="foot__brand" aria-hidden="true">{asciiWord('wombat')}</div>
+    <AsciiWord class="foot__brand" text="wombat" />
     <nav class="foot__nav" aria-label="Project links">
       <a href="https://github.com/ramsterr/Wombat" target="_blank" rel="noopener">GitHub</a>
       <a href="https://github.com/ramsterr/Wombat/releases" target="_blank" rel="noopener">releases</a>

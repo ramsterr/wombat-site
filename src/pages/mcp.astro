@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { asciiWord } from '../lib/ascii';
+import AsciiWord from '../components/AsciiWord.astro';
 
 type Genre = 'code' | 'design' | 'art' | 'docs' | 'data' | 'ops';
 
@@ -175,7 +175,7 @@ const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       <p class="crumb"><a href="/">docs</a> / mcp catalog</p>
       <h1 class="catalog-title">
         <span class="sr-only">MCP catalog</span>
-        <span class="wordmark__art" aria-hidden="true">{asciiWord('mcp')}</span>
+        <AsciiWord class="wordmark__art" text="mcp" />
       </h1>
       <p class="tagline">Servers worth wiring in, by genre.</p>
       <p class="lede">A working set of examples, not a required list. Every card carries the exact <code>wombat mcp add</code> command. Add two or three — each one puts its tool schemas in front of the model.</p>

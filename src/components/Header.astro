@@ -1,5 +1,5 @@
 ---
-import { asciiWord } from '../lib/ascii';
+import AsciiWord from './AsciiWord.astro';
 
 interface Props {
   active?: 'docs' | 'mcp';
@@ -11,7 +11,7 @@ const { active } = Astro.props;
 <header class="top">
   <div class="top__in">
     <a class="brand" href="/" aria-label="Wombat docs home">
-      <span class="brand-ascii" aria-hidden="true">{asciiWord('wombat')}</span>
+      <AsciiWord class="brand-ascii" text="wombat" />
     </a>
     <nav class="nav" aria-label="Sections">
       <a href="/#start" aria-current={active === 'docs' ? 'true' : undefined}>docs</a>

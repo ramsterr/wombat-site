@@ -2,20 +2,20 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { asciiWord } from '../lib/ascii';
+import AsciiWord from '../components/AsciiWord.astro';
 import wombatArt from '../data/wombat.txt?raw';
 
 const nav = [
   { id: 'start', label: 'start', ascii: 'start' },
-  { id: 'configure', label: 'configure', ascii: 'configure' },
-  { id: 'permissions', label: 'permissions', ascii: 'permissions' },
+  { id: 'configure', label: 'configure', ascii: 'config' },
+  { id: 'permissions', label: 'permissions', ascii: 'perms' },
   { id: 'sessions', label: 'sessions', ascii: 'sessions' },
   { id: 'mcp', label: 'mcp', ascii: 'mcp' },
   { id: 'skills', label: 'skills', ascii: 'skills' },
   { id: 'commands', label: 'commands', ascii: 'commands' },
   { id: 'keys', label: 'keys', ascii: 'keys' },
   { id: 'themes', label: 'themes', ascii: 'themes' },
-  { id: 'troubleshooting', label: 'troubleshooting', ascii: 'troubleshoot' },
+  { id: 'troubleshooting', label: 'troubleshooting', ascii: 'fixes' },
 ];
 
 const mcpServers = [
@@ -196,7 +196,7 @@ const themes = [
         <div class="hero__copy">
           <h1 class="wordmark">
             <span class="sr-only">Wombat documentation</span>
-            <span class="wordmark__art" aria-hidden="true">{asciiWord('wombat')}</span>
+            <AsciiWord class="wordmark__art" text="wombat" />
           </h1>
           <p class="tagline">Docs, and the servers worth wiring into it.</p>
           <p class="lede">Install, configure, gate permissions, run a fleet, attach MCP servers and skills. Everything below is the current <code>main</code>.</p>
@@ -235,7 +235,7 @@ const themes = [
         <section id="start">
           <div class="doc__head">
             <h2 class="sr-only">Start</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('start')}</pre>
+            <AsciiWord class="ascii-title" text="start" />
           </div>
           <p>Wombat ships as one binary. Install from <code>main</code>: tagged releases can sit behind the branch, and the branch is where the features in these docs actually live.</p>
 
@@ -278,7 +278,7 @@ wombat run --yolo "fix the failing tests and explain the change"</code></pre>
         <section id="configure">
           <div class="doc__head">
             <h2 class="sr-only">Configure</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('configure')}</pre>
+            <AsciiWord class="ascii-title" text="config" />
           </div>
           <p>Everything lives in <code>~/.wombat/config.json</code>. <code>wombat config</code> prints it with keys redacted; <code>wombat config set</code> changes one value at a time.</p>
 
@@ -315,7 +315,7 @@ wombat config set max_parallel_writers 3</code></pre>
         <section id="permissions">
           <div class="doc__head">
             <h2 class="sr-only">Permissions</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('permissions')}</pre>
+            <AsciiWord class="ascii-title" text="perms" />
           </div>
           <p>Permissions are gated per class, not per tool. Each gate can be <code>allow</code>, <code>ask</code> or <code>deny</code>, and MCP can be gated per server.</p>
           <ul>
@@ -338,7 +338,7 @@ wombat config set permissions.mcp:github ask</code></pre>
         <section id="sessions">
           <div class="doc__head">
             <h2 class="sr-only">Sessions and checkpoints</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('sessions')}</pre>
+            <AsciiWord class="ascii-title" text="sessions" />
           </div>
           <p>Sessions are stored as JSONL transcripts and scoped to a directory. Checkpoints are shadow-git snapshots, so a bad edit is one command away from gone.</p>
 
@@ -355,7 +355,7 @@ wombat checkpoint restore &lt;id&gt;</code></pre>
         <section id="mcp">
           <div class="doc__head">
             <h2 class="sr-only">MCP servers</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('mcp')}</pre>
+            <AsciiWord class="ascii-title" text="mcp" />
           </div>
           <p>Wombat is an MCP client for local stdio servers and remote Streamable HTTP/SSE servers. Their tools appear to the agent as <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>, and each server can hold its own permission gate.</p>
 
@@ -408,7 +408,7 @@ wombat mcp test notion</code></pre>
         <section id="skills">
           <div class="doc__head">
             <h2 class="sr-only">Skills</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('skills')}</pre>
+            <AsciiWord class="ascii-title" text="skills" />
           </div>
           <p>A skill is a folder with a <code>SKILL.md</code> and optional scripts. The agent reads the description at startup and loads the body only when the task matches, so a library of skills costs almost nothing until one is used. Install them with the skills CLI; they land in <code>~/.agents/skills</code> and symlink into each agent that supports them.</p>
 
@@ -443,7 +443,7 @@ npx skills ls -g</code></pre>
         <section id="commands">
           <div class="doc__head">
             <h2 class="sr-only">Commands</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('commands')}</pre>
+            <AsciiWord class="ascii-title" text="commands" />
           </div>
           <div class="tablewrap">
             <table>
@@ -463,7 +463,7 @@ npx skills ls -g</code></pre>
         <section id="keys">
           <div class="doc__head">
             <h2 class="sr-only">Keys</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('keys')}</pre>
+            <AsciiWord class="ascii-title" text="keys" />
           </div>
           <ul class="keylist">
             {keys.map((key) => (
@@ -480,7 +480,7 @@ npx skills ls -g</code></pre>
         <section id="themes">
           <div class="doc__head">
             <h2 class="sr-only">Themes</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('themes')}</pre>
+            <AsciiWord class="ascii-title" text="themes" />
           </div>
           <p>Fifteen palettes ship in the binary. In the app, <code>/theme</code> opens the picker, <code>ctrl+t</code> cycles, and the terminal background is tinted while Wombat runs and restored on exit.</p>
 
@@ -526,7 +526,7 @@ npx skills ls -g</code></pre>
         <section id="troubleshooting">
           <div class="doc__head">
             <h2 class="sr-only">Troubleshooting</h2>
-            <pre class="ascii-title" aria-hidden="true">{asciiWord('troubleshoot')}</pre>
+            <AsciiWord class="ascii-title" text="fixes" />
           </div>
           <dl class="faq">
             <div>
