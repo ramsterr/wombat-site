@@ -1,0 +1,119 @@
+---
+interface Point {
+  label: string;
+  wombat: number;
+  pi: number;
+  piTimeout?: boolean;
+}
+
+interface Props {
+  points: Point[];
+  max: number;
+  caption?: string;
+}
+
+const { points, max, caption } = Astro.props;
+
+const width = 720;
+const height = 300;
+const left = 62;
+const right = 44;
+const top = 24;
+const bottom = 86;
+const plotW = width - left - right;
+const plotH = height - top - bottom;
+
+const step = points.length > 1 ? plotW / (points.length - 1) : 0;
+
+let w = 0;
+let p = 0;
+const series = points.map((point, index) => {
+  w += point.wombat;
+  p += point.pi;
+  return {
+    x: left + index * step,
+    label: point.label,
+    wombat: w,
+    pi: p,
+    piTimeout: point.piTimeout ?? false,
+  };
+});
+
+const y = (value: number) => top + plotH - (Math.min(value, max) / max) * plotH;
+const line = (key: "wombat" | "pi") => series.map((s) => `${s.x},${y(s[key])}`).join(" ");
+const area = `M${series[0].x},${y(0)} L${line("wombat").split(" ").join(" L")} L${
+  series[series.length - 1].x
+},${y(0)} Z`;
+
+const ticks = [0, 100, 200, 300, 400].filter((tick) => tick <= max);
+const last = series[series.length - 1];
+---
+
+<figure class="chart">
+  <div class="chart__legend" aria-hidden="true">
+    <span class="chart__key"><i class="chart__swatch chart__swatch--wombat"></i>Wombat</span>
+    <span class="chart__key"><i class="chart__swatch chart__swatch--pi"></i>Pi</span>
+  </div>
+
+  <div class="chart__scroll">
+    <svg
+      class="chart__svg"
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={caption ?? "Cumulative wall time, Wombat versus Pi"}
+    >
+    <defs>
+      <linearGradient id="cum-area" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#a6e22e" stop-opacity="0.22"></stop>
+        <stop offset="100%" stop-color="#a6e22e" stop-opacity="0"></stop>
+      </linearGradient>
+    </defs>
+
+    {ticks.map((tick) => (
+      <g>
+        <line x1={left} y1={y(tick)} x2={width - right} y2={y(tick)} class="chart__grid"></line>
+        <text x={left - 10} y={y(tick) + 3} class="chart__tick" text-anchor="end">{tick}s</text>
+      </g>
+    ))}
+
+    <path d={area} fill="url(#cum-area)"></path>
+    <polyline points={line("pi")} class="chart__line chart__line--pi"></polyline>
+    <polyline points={line("wombat")} class="chart__line chart__line--wombat"></polyline>
+
+    {series.map((point) => (
+      <g>
+        {point.piTimeout && (
+          <line
+            x1={point.x}
+            y1={y(point.pi)}
+            x2={point.x}
+            y2={height - bottom + 6}
+            class="chart__timeout"
+          ></line>
+        )}
+        <circle cx={point.x} cy={y(point.pi)} r="2.6" class="chart__dot chart__dot--pi">
+          <title>{`Pi — ${point.label}: ${point.pi.toFixed(1)}s cumulative`}</title>
+        </circle>
+        <circle cx={point.x} cy={y(point.wombat)} r="2.6" class="chart__dot chart__dot--wombat">
+          <title>{`Wombat — ${point.label}: ${point.wombat.toFixed(1)}s cumulative`}</title>
+        </circle>
+        <text
+          x={point.x}
+          y={height - bottom + 24}
+          class="chart__task"
+          text-anchor="middle"
+          transform={`rotate(-34 ${point.x} ${height - bottom + 24})`}
+        >{point.label}</text>
+      </g>
+    ))}
+
+    <text x={last.x - 10} y={y(last.wombat) + 20} class="chart__flag chart__flag--wombat" text-anchor="end">
+      {last.wombat.toFixed(0)}s
+    </text>
+    <text x={last.x - 8} y={y(last.pi) - 10} class="chart__flag chart__flag--pi" text-anchor="end">
+      {last.pi.toFixed(0)}s
+    </text>
+    </svg>
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

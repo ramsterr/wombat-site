@@ -1,0 +1,147 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout
+  title="Getting started — Wombat docs"
+  description="Install Wombat from source or a release, run setup, choose the classic or opentui interface, and finish a first task."
+  heading="Getting started"
+  lede="One binary, no runtime. Install, choose a provider, and the first task is a command away. The tagged release is v0.2.6; main is ahead of it, and the features on this site are described against main."
+>
+  <section>
+    <h2>Install</h2>
+    <p>
+      Pick the path that matches how current you want to be. The installer gives you the latest
+      tagged release; <code>go install ...@main</code> gives you the branch, which is where the
+      capability profiles, research budgets and custom agents actually live.
+    </p>
+
+    <div class="codewrap">
+      <pre><code id="install-release"># latest tagged release (v0.2.6)
+curl -fsSL https://raw.githubusercontent.com/ramsterr/Wombat/main/install.sh | bash
+
+# current main — recommended if you want what this site documents
+go install github.com/ramsterr/Wombat/cmd/wombat@main
+
+# from a checkout
+git clone --depth 1 --single-branch --no-tags https://github.com/ramsterr/Wombat.git
+cd Wombat
+go build -o wombat ./cmd/wombat</code></pre>
+      <button class="copy" type="button" data-copy="install-release">copy</button>
+    </div>
+
+    <p>
+      <code>go install</code> writes the binary to <code>$(go env GOPATH)/bin</code>. If the
+      command is not found afterwards, add that directory to <code>PATH</code>. Homebrew users
+      can install the tagged release with <code>brew install ramsterr/wombat/wombat</code>.
+    </p>
+
+    <div class="note">
+      <strong>Requirements.</strong> Go <strong>1.26.3+</strong> only when building from source.
+      The optional opentui interface needs Node <strong>26.4+</strong> once, at build time. The
+      classic interface has no runtime dependencies at all.
+    </div>
+  </section>
+
+  <section>
+    <h2>First run</h2>
+    <div class="codewrap">
+      <pre><code id="first-run">wombat setup    # provider, API key, model
+wombat doctor   # config, permissions, connectivity
+wombat          # open the chat</code></pre>
+      <button class="copy" type="button" data-copy="first-run">copy</button>
+    </div>
+    <p>
+      <code>setup</code> runs automatically on first launch and writes
+      <code>~/.wombat/config.json</code>. It understands OpenAI-compatible APIs (including
+      self-hosted gateways), Anthropic, OpenCode and local model servers. Keys can live in the
+      environment instead of the file — <code>OPENAI_API_KEY</code>,
+      <code>ANTHROPIC_API_KEY</code>, and the provider-specific variables each gateway uses.
+    </p>
+    <p>
+      <code>wombat doctor</code> is safe to run at any time: it prints the resolved config with
+      keys redacted, checks permissions, and makes a small connectivity call to the provider.
+    </p>
+  </section>
+
+  <section>
+    <h2>Which interface you get</h2>
+    <p>
+      The classic terminal interface works out of the box with zero extra build steps. The newer
+      opentui interface is optional: build it once inside the checkout and Wombat loads it
+      automatically on the next start.
+    </p>
+    <div class="codewrap">
+      <pre><code id="build-ui">git clone https://github.com/ramsterr/Wombat.git
+cd Wombat/tui
+npm install
+npm run build
+cd ..
+./wombat            # new UI loads because this checkout has the build</code></pre>
+      <button class="copy" type="button" data-copy="build-ui">copy</button>
+    </div>
+    <p>
+      Both interfaces run the same agent, tools, sessions and permissions; only the rendering
+      differs. Switch back with <code>wombat classic</code>, <code>wombat chat</code>, or
+      <code>WOMBAT_CLASSIC=1 wombat</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Run a task without the UI</h2>
+    <div class="codewrap">
+      <pre><code id="headless">wombat run "summarize this repository and find the test command"
+wombat run --yolo "fix the failing tests and explain the change"
+wombat run -m gpt-5 -p openai "port the CLI to the new flag parser"
+wombat run --profile minimal "rename the helper and update call sites"</code></pre>
+      <button class="copy" type="button" data-copy="headless">copy</button>
+    </div>
+    <p>
+      <code>run</code> executes one task and exits. <code>-c</code> continues the latest session,
+      <code>--quiet</code> prints only assistant text, and <code>--yolo</code> auto-approves tool
+      permissions for that run. The full flag list is in the <a href="/docs/cli">CLI reference</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Updating</h2>
+    <div class="codewrap">
+      <pre><code id="update">wombat upgrade                  # latest tagged release
+wombat upgrade --check          # is there a newer release?
+go install github.com/ramsterr/Wombat/cmd/wombat@main   # stay on the branch</code></pre>
+      <button class="copy" type="button" data-copy="update">copy</button>
+    </div>
+    <div class="note">
+      <strong>Upgrade moves you backwards if you build from source.</strong>
+      <code>wombat upgrade</code> installs the newest tag. To stay on <code>main</code>, rerun the
+      <code>go install ...@main</code> line instead.
+    </div>
+  </section>
+
+  <section>
+    <h2>Windows</h2>
+    <p>
+      Install WSL2 with <code>wsl --install</code> and run the macOS/Linux command inside Ubuntu.
+      Git Bash works for the native build, but the <code>bash</code> tool needs a POSIX
+      <code>sh</code>, so native PowerShell and <code>cmd</code> are not fully supported.
+    </p>
+  </section>
+
+  <section>
+    <h2>Where to go next</h2>
+    <div class="guides">
+      <a class="guide" href="/docs/configuration">
+        <span class="guide__n">next</span>
+        <h3>Configuration</h3>
+        <p>Providers, models, permission gates and every setting in the config file.</p>
+        <span class="guide__go">open guide →</span>
+      </a>
+      <a class="guide" href="/docs/tools">
+        <span class="guide__n">then</span>
+        <h3>Tools &amp; profiles</h3>
+        <p>Why the default profile exposes nine tools, and how capabilities load on demand.</p>
+        <span class="guide__go">open guide →</span>
+      </a>
+    </div>
+  </section>
+</DocsLayout>

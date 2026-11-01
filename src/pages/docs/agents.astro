@@ -1,0 +1,174 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+
+const agentDef = `{
+  "name": "math-research",
+  "description": "Verifies mathematical claims and writes clear proofs",
+  "prompt": "You are a rigorous mathematician. Justify each step and cite sources.",
+  "provider": "",
+  "model": "",
+  "tools": ["read", "grep", "websearch", "webfetch"],
+  "exclude_tools": [],
+  "mcp_servers": [],
+  "permissions": { "write": "deny" },
+  "skills": ["careful-proofs"],
+  "max_steps": 0,
+  "readonly": true
+}`;
+---
+
+<DocsLayout
+  title="Agents and orchestration — Wombat docs"
+  description="Custom agents, the plan scheduler, scouts and writers in git worktrees, review and check policy, resumable workers, and skills."
+  heading="Agents & orchestration"
+  lede="One agent is the default. A fleet is something you ask for: a ledger of steps, disjoint file ownership, isolated worktrees, and a check before any patch lands."
+>
+  <section>
+    <h2>Custom agents</h2>
+    <p>
+      A custom agent is a specialist you define once: its own system prompt, tool allowlist,
+      permissions, MCP servers, skills and optional model. Select any number per session and the
+      planner treats them as first-class workers.
+    </p>
+
+    <div class="codewrap">
+      <pre><code id="agents-cli">wombat agent new math-research
+wombat agent list
+wombat run --agents math-research,design "research MCTS and design a deck"</code></pre>
+      <button class="copy" type="button" data-copy="agents-cli">copy</button>
+    </div>
+
+    <p>
+      Definitions live in <code>~/.wombat/agents/&lt;name&gt;.json</code> (or markdown with flat
+      frontmatter), or in <code>.wombat/agents/</code> inside a project, where the project wins.
+      They can also be declared inline under <code>agents</code> in
+      <code>config.json</code>.
+    </p>
+
+    <div class="codewrap">
+      <pre><code id="agent-def">{agentDef}</code></pre>
+      <button class="copy" type="button" data-copy="agent-def">copy</button>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">field</th><th scope="col">meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>description</code></td><td>When the planner and the picker should reach for this agent.</td></tr>
+          <tr><td><code>prompt</code>, <code>prompt_file</code></td><td>The agent's system prompt, inline or from a file.</td></tr>
+          <tr><td><code>provider</code>, <code>model</code></td><td>Run this agent on a different model than the lead.</td></tr>
+          <tr><td><code>tools</code></td><td>Allowlist of names, globs (<code>web*</code>), classes (<code>class:read</code>) or <code>mcp:&lt;server&gt;</code>. Empty means every worker-eligible tool.</td></tr>
+          <tr><td><code>exclude_tools</code></td><td>Remove tools that would otherwise be included.</td></tr>
+          <tr><td><code>mcp_servers</code></td><td>Restrict the agent to the named MCP servers.</td></tr>
+          <tr><td><code>permissions</code></td><td><code>allow</code> or <code>deny</code> for bash, write, edit, network, dangerous, sensitive-read, outside, mcp and mcp:&lt;server&gt;. Custom agents never prompt, so <code>ask</code> is rejected.</td></tr>
+          <tr><td><code>skills</code></td><td>Skill names whose instructions are appended to the prompt.</td></tr>
+          <tr><td><code>max_steps</code></td><td>Per-run step budget; 0 uses the session default.</td></tr>
+          <tr><td><code>readonly</code></td><td>Blocks writes, edits and mutating commands.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      In the TUI, <code>/agents</code> opens a multi-select picker with a
+      <strong>Create a new agent…</strong> row. The builder has sections for the prompt, tools, MCP
+      servers, permissions, skills and options, and writes the definition file for you. Space
+      toggles an agent, <code>a</code> selects all or none, enter applies. Selections are saved on
+      the session and come back with <code>wombat resume</code>. Chat mode forces every selected
+      agent read-only, and <code>max_parallel_agents</code> (default 5) caps how many run at once.
+    </p>
+  </section>
+
+  <section>
+    <h2>The plan</h2>
+    <p>
+      The lead keeps a task ledger: goal, durable facts, and ordered steps with explicit
+      dependencies. Each step names its kind (<code>scout</code> for read-only research,
+      <code>write</code> for owned files), the files it may change, and optionally a custom agent.
+    </p>
+    <div class="codewrap">
+      <pre><code>update_plan     goal, facts, steps, checks
+run_plan        execute the ledger as a dependency graph
+run_plan        background=true returns immediately; cancel=true stops it
+delegate        one worker, one self-contained brief
+delegate_many   2-6 workers in one wave; id + depends_on build a DAG
+delegate_write  writer with explicit file ownership
+resume_worker   answer a worker that reported needs_input</code></pre>
+    </div>
+    <p>
+      Scheduling is continuous, not round-based. A slow step does not hold back an independent
+      one, free slots start newly-ready work, long dependency chains are scheduled first, writers
+      can review and merge while scouts are still running, and a timed-out or transient step is
+      retried once. Canceled or interrupted steps stay pending, so a later
+      <code>run_plan</code> resumes them instead of starting over.
+    </p>
+  </section>
+
+  <section>
+    <h2>Workers and worktrees</h2>
+    <p>
+      Workers are full-access by default: they read, write, edit, run commands, use the network,
+      browse and search. Orchestration tools and <code>question</code> stay with the lead.
+    </p>
+    <ul>
+      <li>Writers declare the files they own. Writes outside that set are refused.</li>
+      <li>Work runs in a git worktree where possible; warm worktrees are reused between steps.</li>
+      <li>Changes are reviewed, checks run once, and the patch is three-way merged.</li>
+      <li>A worker that needs a decision returns <code>needs_input</code>; <code>resume_worker</code> continues the same session and worktree.</li>
+      <li>A dirty tracked tree blocks writers — commit or stash first.</li>
+    </ul>
+    <div class="codewrap">
+      <pre><code id="worker-settings">wombat config set worker_full_access false   # read-only research workers
+wombat config set max_parallel_scouts 5
+wombat config set max_parallel_writers 2
+wombat config set check_policy auto          # auto | worktree | merge | both
+wombat config set review_policy always       # always | auto | never
+wombat config set review_writers true</code></pre>
+      <button class="copy" type="button" data-copy="worker-settings">copy</button>
+    </div>
+    <div class="note">
+      <strong>When not to use a fleet.</strong> One shell command, one file, or several agents
+      reading the same source is slower with workers. Parallelism pays when the slices are
+      genuinely independent: different files, different pages, different audits.
+    </div>
+  </section>
+
+  <section>
+    <h2>Skills</h2>
+    <p>
+      A skill is a markdown file of instructions that one or more agents load. Skills live in
+      <code>~/.wombat/skills/&lt;name&gt;.md</code> for the user and
+      <code>.wombat/skills/&lt;name&gt;.md</code> for a project; the project copy wins on a name
+      clash. They are attached per agent through the <code>skills</code> field, or with the
+      Skills section of the agent builder.
+    </p>
+    <div class="codewrap">
+      <pre><code id="skills">mkdir -p .wombat/skills
+$EDITOR .wombat/skills/careful-proofs.md
+
+/skill                 # browser: list, inspect, expand
+/skill list
+/skill careful-proofs  # print the instructions in full</code></pre>
+      <button class="copy" type="button" data-copy="skills">copy</button>
+    </div>
+    <p>
+      A skill only reaches the model when an agent that names it is running, so a library of
+      skills costs nothing until it is used. Skills run with that agent's permissions; read one
+      before you install it.
+    </p>
+    <div class="note">
+      <strong>Skills vs MCP.</strong> A skill is instruction and taste. An MCP server is reach.
+      Install skills to change how the agent decides; attach MCP servers to change what it can
+      touch.
+    </div>
+  </section>
+
+  <section>
+    <h2>Modes</h2>
+    <p>
+      <code>create</code> mode (the default) can write and run. <code>chat</code> mode is
+      read-only: writes and mutating commands are off for the lead and every selected agent. Switch
+      with <code>/mode</code> or <code>wombat config set mode chat</code>; <code>/modes</code>
+      lists what is available.
+    </p>
+  </section>
+</DocsLayout>

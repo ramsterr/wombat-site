@@ -2,6 +2,8 @@ node_modules/
 dist/
 .astro/
 .npm-cache/
+.notes/
+.shots/
 .DS_Store
 .env
 .env.*

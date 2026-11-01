@@ -1,0 +1,181 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout
+  title="Tools and profiles — Wombat docs"
+  description="Wombat's tool profiles and capabilities: the nine-tool coding profile, tool_search, request_capability, research modes and budgets, web search backends and verification."
+  heading="Tools & profiles"
+  lede="A tool is a schema in every request. Wombat keeps the default registry small, then lets the model ask for reach when the task needs it."
+>
+  <section>
+    <h2>The registry</h2>
+    <p>
+      Deduplication cut the always-exposed registry from 34 tools to 18 (19 with
+      <code>question</code>). The default <code>coding</code> profile exposes nine of them:
+    </p>
+    <div class="codewrap">
+      <pre><code id="coding-tools">read  write  edit  bash  glob  grep  apply_patch  tool_search  request_capability</code></pre>
+    </div>
+    <p>
+      Git actions run through <code>bash git</code>. Rename, refactor, multi-edit, the separate jobs
+      list and the git tools are gone from the registry; the implementations that remain are on a
+      one-release soft cut. <code>TestRegistryDedup</code> locks both the 18-tool registry and the
+      nine-tool profile, so the count does not drift back up by accident.
+    </p>
+  </section>
+
+  <section>
+    <h2>Profiles</h2>
+    <p>
+      A profile is a preset bundle of capabilities. Set it in the config, on
+      <code>wombat run --profile</code>, or with <code>/profile</code> in chat.
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">profile</th><th scope="col">capabilities</th><th scope="col">tools</th></tr></thead>
+        <tbody>
+          <tr><td><code>minimal</code></td><td>core</td><td>read, write, edit, bash, glob, grep, todowrite, tool_search, request_capability</td></tr>
+          <tr><td><code>coding</code> (default)</td><td>core + edit</td><td>the nine above plus apply_patch</td></tr>
+          <tr><td><code>web</code></td><td>core + edit + web</td><td>browser, websearch, webfetch, request_more_research</td></tr>
+          <tr><td><code>semantic</code></td><td>core + edit + semantic</td><td>lsp</td></tr>
+          <tr><td><code>verify</code></td><td>core + edit + verify</td><td>verify</td></tr>
+          <tr><td><code>media</code></td><td>core + edit + media</td><td>imagesearch</td></tr>
+          <tr><td><code>orchestrator</code></td><td>core + edit</td><td>planning and worker tools, when orchestration is enabled</td></tr>
+          <tr><td><code>full</code></td><td>everything</td><td>the whole registry, including optional capabilities</td></tr>
+          <tr><td><code>auto</code></td><td>coding, plus what the prompt implies</td><td>resolved at request time</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Capabilities</h2>
+    <p>
+      A capability is a named bundle of tools the model can request mid-run. Four are optional and
+      can be forced on or off per session.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">capability</th><th scope="col">loads</th><th scope="col">default</th></tr></thead>
+        <tbody>
+          <tr><td><code>web</code></td><td>browser, websearch, webfetch, request_more_research</td><td>auto</td></tr>
+          <tr><td><code>semantic</code></td><td>lsp — definitions, references, diagnostics, completions, symbols</td><td>off</td></tr>
+          <tr><td><code>verify</code></td><td>verify — run the project's own tests, build, lint, typecheck</td><td>off</td></tr>
+          <tr><td><code>media</code></td><td>imagesearch — find and download image references</td><td>off</td></tr>
+          <tr><td><code>mcp</code></td><td>every tool from your attached MCP servers</td><td>auto</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>How a capability gets loaded</h3>
+    <p>
+      <code>tool_search</code> takes a query and returns compact matches — name, one-line purpose
+      and the tool count — without loading anything. <code>request_capability</code> then loads
+      one named capability for the rest of the session.
+    </p>
+    <div class="codewrap">
+      <pre><code id="capability-flow">tools: 8 → schema 1,219 tokens → first request 1,877 input tokens
+
+model: request_capability("web", "need to inspect the page")
+result: loaded browser, webfetch, websearch
+next request: 11 tools, 2,690 schema tokens</code></pre>
+    </div>
+    <p>
+      That is the whole trade: 1.9k tokens for a coding turn, 2.7k when the browser is genuinely
+      needed, instead of ~10k of schemas on every request.
+    </p>
+  </section>
+
+  <section>
+    <h2>Research budgets</h2>
+    <p>
+      Research is a policy, not a tool description. Each mode has a soft budget that triggers
+      "synthesize now", a hard ceiling that refuses the call, and a wall-clock cap.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th scope="col">mode</th><th scope="col">soft search / fetch</th><th scope="col">hard ceiling</th><th scope="col">time cap</th><th scope="col">depth</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>off</code></td><td>—</td><td>—</td><td>—</td><td>no web tools</td></tr>
+          <tr><td><code>quick</code></td><td>2 / 1</td><td>4 / 2</td><td>60s</td><td>fast</td></tr>
+          <tr><td><code>standard</code></td><td>5 / 3</td><td>8 / 4</td><td>120s</td><td>fast</td></tr>
+          <tr><td><code>deep</code></td><td>10 / 6</td><td>15 / 8</td><td>300s</td><td>deep</td></tr>
+          <tr><td><code>auto</code></td><td colspan="4">Quick unless the prompt asks for a deep dive, a comparison, or systematic verification.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      When the soft budget is spent, the tool returns:
+    </p>
+    <div class="codewrap">
+      <pre><code>research fetch soft budget reached (1/1); synthesize now or call
+request_more_research with a specific reason</code></pre>
+    </div>
+    <p>
+      <code>request_more_research</code> buys one more search and one more fetch, requires a
+      written reason, and is refused once the hard ceiling is hit. This is the difference between
+      the old 13-search loop and the 21s research turn measured in the
+      <a href="/compare">benchmarks</a>.
+    </p>
+    <div class="note">
+      <strong>Answer first.</strong> Recommendations and opinions come from the model's knowledge.
+      The web is for current facts or explicit verification, and the system prompt says so.
+    </div>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    <p>
+      A vague prompt ("fix it") gets one bounded round: at most two <code>question</code> calls per
+      run, each offering 2–3 concrete options, and never a second round. Headless runs —
+      <code>wombat run</code> — do not ask at all; they state their assumptions and proceed, then
+      exit 0.
+    </p>
+  </section>
+
+  <section>
+    <h2>Web search and fetch</h2>
+    <p>
+      <code>websearch</code> runs the configured backends in parallel — Brave, Serper, Exa and
+      Tavily when keys are set, plus keyless Bing RSS, DuckDuckGo HTML and Mojeek — then merges,
+      cross-checks and ranks. It accepts 2–4 query variants, freshness, language, region and
+      pagination; results are cached for ten minutes; trusted docs and GitHub are boosted and
+      SEO spam is filtered. By default it also fetches the top three pages and adds an excerpt
+      with date and author when it can find them.
+    </p>
+    <p>
+      <code>webfetch</code> extracts the main article text, pretty-prints JSON, returns XML as
+      text, and says so plainly for PDFs and binary payloads. Both share a 15-second HTTP client
+      with retries and a five-second grace window after the first backend answers.
+    </p>
+    <div class="codewrap">
+      <pre><code id="search-keys">export EXA_API_KEY=...
+export TAVILY_API_KEY=...
+export BRAVE_API_KEY=...
+export SERPER_API_KEY=...</code></pre>
+      <button class="copy" type="button" data-copy="search-keys">copy</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Verification and semantics</h2>
+    <p>
+      <code>verify</code> reads the project, works out the test, build, lint and typecheck
+      commands, and runs them. With <code>require_verification</code> on, a run cannot report
+      success without a passing check. Writers always run their checks before a patch merges.
+    </p>
+    <p>
+      <code>lsp</code> asks a language server for definitions, references, diagnostics,
+      completions, workspace symbols and file outlines. Go uses <code>gopls</code>; TypeScript,
+      Python, Rust, C/C++, Java, Ruby, PHP, Lua, C#, Swift, Kotlin and shell use their standard
+      servers when installed. Set <code>WOMBAT_LSP_&lt;EXT&gt;</code> to point at a specific
+      binary.
+    </p>
+  </section>
+</DocsLayout>

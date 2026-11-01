@@ -1,0 +1,136 @@
+---
+interface Bar {
+  tone: "wombat" | "pi";
+  value: number;
+  display: string;
+  dashed?: boolean;
+}
+
+interface Row {
+  label: string;
+  sub?: string;
+  bars: Bar[];
+}
+
+interface Props {
+  rows: Row[];
+  max: number;
+  tickCount?: number;
+  labelWidth?: number;
+  caption?: string;
+  compact?: boolean;
+  showLegend?: boolean;
+}
+
+const {
+  rows,
+  max,
+  tickCount = 4,
+  labelWidth: labelProp,
+  caption,
+  compact = false,
+  showLegend = true,
+} = Astro.props;
+
+const width = compact ? 480 : 720;
+const labelWidth = labelProp ?? (compact ? 100 : 176);
+const valueGutter = compact ? 64 : 78;
+const plot = width - labelWidth - valueGutter;
+const padTop = 24;
+const rowHeight = compact ? 40 : 44;
+const barHeight = compact ? 11 : 12;
+const barGap = 5;
+const height = padTop + rows.length * rowHeight + 18;
+const uid = Math.random().toString(36).slice(2, 8);
+
+const hasBars = rows.some((row) => row.bars.length > 0);
+const ticks = Array.from({ length: tickCount + 1 }, (_, index) => (max / tickCount) * index);
+---
+
+<figure class:list={["chart", compact && "chart--compact"]}>
+  {showLegend && hasBars && (
+    <div class="chart__legend" aria-hidden="true">
+      <span class="chart__key"><i class="chart__swatch chart__swatch--wombat"></i>Wombat</span>
+      <span class="chart__key"><i class="chart__swatch chart__swatch--pi"></i>Pi</span>
+    </div>
+  )}
+
+  <div class="chart__scroll">
+    <svg
+      class="chart__svg"
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={caption ?? "Bar chart"}
+    >
+    <defs>
+      <linearGradient id={`w-${uid}`} x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#6f9c16"></stop>
+        <stop offset="100%" stop-color="#a6e22e"></stop>
+      </linearGradient>
+      <linearGradient id={`p-${uid}`} x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#4f6478"></stop>
+        <stop offset="100%" stop-color="#7f98b3"></stop>
+      </linearGradient>
+    </defs>
+
+    {ticks.map((tick) => (
+      <g>
+        <line
+          x1={labelWidth + (tick / max) * plot}
+          y1={padTop - 8}
+          x2={labelWidth + (tick / max) * plot}
+          y2={padTop + rows.length * rowHeight - 10}
+          class="chart__grid"
+        />
+        <text
+          x={labelWidth + (tick / max) * plot}
+          y={padTop - 12}
+          class="chart__tick"
+          text-anchor="middle"
+        >{tick}</text>
+      </g>
+    ))}
+
+    {rows.map((row, rowIndex) => {
+      const top = padTop + rowIndex * rowHeight;
+      const bars = row.bars;
+      const stackHeight = bars.length * barHeight + (bars.length - 1) * barGap;
+      const start = top + (rowHeight - stackHeight) / 2;
+      return (
+        <g>
+          <text x="0" y={top + rowHeight / 2 - 2} class="chart__label">{row.label}</text>
+          {row.sub && (
+            <text x="0" y={top + rowHeight / 2 + 12} class="chart__sublabel">{row.sub}</text>
+          )}
+          {bars.map((bar, barIndex) => {
+            const y = start + barIndex * (barHeight + barGap);
+            const w = Math.max((bar.value / max) * plot, 2);
+            return (
+              <g>
+                <rect
+                  x={labelWidth}
+                  y={y}
+                  width={w}
+                  height={barHeight}
+                  rx="2"
+                  fill={`url(#${bar.tone === "wombat" ? "w" : "p"}-${uid})`}
+                  class={bar.dashed ? "chart__bar chart__bar--dashed" : "chart__bar"}
+                >
+                  <title>{`${row.label} — ${bar.display}`}</title>
+                </rect>
+                <text
+                  x={labelWidth + w + 8}
+                  y={y + barHeight - 2}
+                  class={`chart__value chart__value--${bar.tone}`}
+                  dominant-baseline="middle"
+                >{bar.display}</text>
+              </g>
+            );
+          })}
+        </g>
+      );
+    })}
+    </svg>
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

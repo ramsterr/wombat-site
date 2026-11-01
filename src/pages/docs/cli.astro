@@ -1,0 +1,175 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+
+const commands = [
+  ["wombat", "open the chat UI (new UI when built, classic otherwise)"],
+  ["wombat classic", "force the classic TUI"],
+  ["wombat chat", "open the chat (alias of the default command)"],
+  ["wombat run \"<task>\"", "run one task and exit"],
+  ["wombat run -c \"<task>\"", "continue the latest session"],
+  ["wombat resume [id|last]", "reopen a session in either UI"],
+  ["wombat sessions", "list sessions for this directory"],
+  ["wombat setup", "choose provider, key and model"],
+  ["wombat models [provider]", "list models the provider reports"],
+  ["wombat doctor", "diagnose config, permissions and connectivity"],
+  ["wombat config", "print config with keys redacted"],
+  ["wombat config set <key> <value>", "change one setting"],
+  ["wombat mcp add|list|test|import", "attach and check MCP servers"],
+  ["wombat mcp login|logout|enable|disable|remove", "manage servers"],
+  ["wombat agent new|list", "scaffold and list custom agents"],
+  ["wombat checkpoint list|restore", "shadow-git snapshots"],
+  ["wombat upgrade", "install the latest tagged release"],
+  ["wombat version", "print the version"],
+];
+
+const runFlags = [
+  ["-m <model>", "model override for this run"],
+  ["-p <provider>", "provider override"],
+  ["--yolo", "auto-approve tool permissions"],
+  ["-c", "continue the latest session"],
+  ["--quiet", "print assistant text only"],
+  ["--profile <name>", "auto, minimal, coding, web, semantic, verify, media, orchestrator, full"],
+  ["--research <mode>", "auto, off, quick, standard, deep"],
+  ["--agents a,b", "custom agents for this run"],
+  ["-i, --image <path>", "attach an image (repeatable)"],
+  ["--file, --video, --audio", "attach other media"],
+];
+
+const slash = [
+  ["session", "/new · /compact · /clear · /history · /sessions · /copy [n|all] · /exit"],
+  ["models", "/model · /configure · /providers · /models · /reasoning"],
+  ["context", "/status · /cost · /usage · /todos · /sources · /reference add|rm|clear"],
+  ["tools", "/toolset · /agents · /mcp · /preview [n] · /previews · /imagen · /skill"],
+  ["appearance", "/theme · /mouse · /thinking · /keys · /help"],
+  ["safety", "/mode · /modes · /yolo · /doctor · /setup"],
+];
+
+const keys = [
+  ["enter / shift+enter", "send / new line"],
+  ["esc", "stop the run, close an overlay"],
+  ["/", "command palette"],
+  ["@", "file picker with tab completion"],
+  ["ctrl+o", "open the newest preview"],
+  ["ctrl+g or ?", "help and key map"],
+  ["ctrl+t", "cycle themes"],
+  ["ctrl+p / ctrl+n", "prompt history"],
+  ["ctrl+r", "project references"],
+  ["ctrl+y", "copy the last reply"],
+  ["alt+2/3/4/5", "sessions, models, usage, doctor"],
+  ["pgup / pgdn", "scroll the transcript"],
+];
+
+const themes = [
+  "wombat", "tokyo", "catppuccin", "gruvbox", "nord", "rosepine", "dracula",
+  "everforest", "kanagawa", "solarized", "monokai", "iceberg", "nightfox",
+  "onedark", "github",
+];
+---
+
+<DocsLayout
+  title="CLI reference — Wombat docs"
+  description="Every Wombat command, run flag, slash command, key binding, theme, and how sessions and checkpoints work."
+  heading="CLI reference"
+  lede="One binary, a handful of subcommands, and a chat surface that covers the rest. Everything here is quoted from main, not from memory."
+>
+  <section>
+    <h2>Commands</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">command</th><th scope="col">what it does</th></tr></thead>
+        <tbody>
+          {commands.map(([cmd, desc]) => (
+            <tr><td><code>{cmd}</code></td><td>{desc}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <code>wombat run</code> is the scriptable path: it exits when the task is done, streams
+      nothing extra with <code>--quiet</code>, and never stops mid-build to ask a question.
+    </p>
+  </section>
+
+  <section>
+    <h2>Run flags</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">flag</th><th scope="col">meaning</th></tr></thead>
+        <tbody>
+          {runFlags.map(([flag, desc]) => (
+            <tr><td><code>{flag}</code></td><td>{desc}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Inside the chat</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">group</th><th scope="col">commands</th></tr></thead>
+        <tbody>
+          {slash.map(([group, list]) => (
+            <tr><td>{group}</td><td><code>{list}</code></td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <code>/help</code> (or <code>/keys</code>) prints the same list with the key map. The
+      command palette opens on <code>/</code> and filters as you type.
+    </p>
+  </section>
+
+  <section>
+    <h2>Keys</h2>
+    <ul class="keylist">
+      {keys.map(([k, label]) => (
+        <li><span class="keyset"><kbd>{k}</kbd></span><span>{label}</span></li>
+      ))}
+    </ul>
+    <p>
+      The classic interface has its own map: run <code>/help</code> there. Mouse wheel scrolling
+      replaces text selection while <code>mouse</code> is on; turn it off to select and copy with
+      the terminal instead.
+    </p>
+  </section>
+
+  <section>
+    <h2>Sessions</h2>
+    <p>
+      A session is a JSONL transcript, scoped to the directory you started in and stored under
+      <code>~/.wombat/sessions/&lt;project-hash&gt;/</code>. Tool calls, prompts and model
+      usage are recorded alongside the messages, which is what <code>/sources</code> and
+      <code>/cost</code> read.
+    </p>
+    <div class="codewrap">
+      <pre><code id="sessions">wombat sessions
+wombat resume last
+wombat run -c "keep going"
+wombat checkpoint list
+wombat checkpoint restore &lt;id&gt;</code></pre>
+      <button class="copy" type="button" data-copy="sessions">copy</button>
+    </div>
+    <p>
+      Checkpoints are a private shadow git repository next to the session. They are on by
+      default; <code>wombat config set checkpoints false</code> turns them off.
+      <code>restore</code> takes <code>--yes</code> and <code>--session</code> flags when you are
+      scripting it.
+    </p>
+  </section>
+
+  <section>
+    <h2>Themes</h2>
+    <p>
+      Fifteen palettes ship in the binary. <code>/theme</code> opens the live picker,
+      <code>ctrl+t</code> cycles, and the choice is saved to the config.
+    </p>
+    <p class="themes__list">{themes.join(" · ")}</p>
+    <p>
+      The classic interface still tints the terminal background while Wombat runs and restores it
+      on exit; <code>wombat config set paint_background false</code> disables that.
+    </p>
+  </section>
+</DocsLayout>
