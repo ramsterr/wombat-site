@@ -1,0 +1,175 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout
+  title="Troubleshooting — Wombat docs"
+  description="Fixes for the failures people actually hit with Wombat: PATH, provider errors, dirty worktrees, MCP startup, missing previews, token usage and upgrades."
+  heading="Troubleshooting"
+  lede="Most failures are one of eight things. Run wombat doctor first; it prints the resolved config with keys redacted, checks permissions, and makes one small provider request."
+>
+  <section>
+    <h2>Before anything else</h2>
+    <div class="codewrap">
+      <pre><code id="doctor">wombat doctor
+wombat config
+wombat version</code></pre>
+      <button class="copy" type="button" data-copy="doctor">copy</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Install and startup</h2>
+    <dl class="faq">
+      <div>
+        <dt>wombat: command not found</dt>
+        <dd>
+          <code>go install</code> writes to <code>$(go env GOPATH)/bin</code>; the installer uses
+          <code>~/.local/bin</code>. Add the right directory to <code>PATH</code>, or run the
+          binary by full path.
+        </dd>
+      </div>
+      <div>
+        <dt>No provider or model</dt>
+        <dd>Run <code>wombat setup</code>, then <code>wombat doctor</code>. Both are safe to re-run and keep your other settings.</dd>
+      </div>
+      <div>
+        <dt>The new UI does not appear</dt>
+        <dd>
+          It is opt-in: <code>cd tui &amp;&amp; npm install &amp;&amp; npm run build</code>, then
+          run Wombat from that checkout. Node 26.4+ is required. Without the build you get the
+          classic TUI, which has every feature except the rendering.
+        </dd>
+      </div>
+      <div>
+        <dt>Connection reset by peer</dt>
+        <dd>
+          Wombat retries transient errors with backoff, including mid-stream: it clears the
+          partial output, retries, and asks the model to continue when the provider's retries run
+          out. If it still fails, check the network, proxy or VPN.
+        </dd>
+      </div>
+      <div>
+        <dt>HTTP 429 or a rate limit</dt>
+        <dd>
+          Set a fallback model (<code>wombat config set fallback_models ...</code>) or a cheaper
+          model for workers (<code>scout_model</code>). Benchmark runs hit this too; the
+          <a href="/compare">comparison page</a> names the model each suite used.
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Agent behaviour</h2>
+    <dl class="faq">
+      <div>
+        <dt>Writers fail with "main workspace has tracked changes"</dt>
+        <dd>
+          Workers use git worktrees and need a clean tracked tree. Commit or stash first.
+          <code>keep_worktrees</code> keeps the worktrees around if you want to inspect a failed
+          merge.
+        </dd>
+      </div>
+      <div>
+        <dt>A headless run stops or hangs on a question</dt>
+        <dd>
+          It should not: <code>wombat run</code> never asks. Vague prompts state assumptions and
+          exit 0, and the question tool is capped at two calls per session. If a run is waiting
+          on a permission instead, that is a permission gate — use <code>--yolo</code> for a
+          trusted job or set the class to <code>allow</code>.
+        </dd>
+      </div>
+      <div>
+        <dt>A search was refused</dt>
+        <dd>
+          The bash tool rejects <code>find</code>, <code>grep</code>, <code>rg</code>,
+          <code>fd</code>, <code>ls</code>, <code>du</code>, <code>tree</code>,
+          <code>mdfind</code> and <code>locate</code> against <code>/</code>, <code>~</code>,
+          <code>$HOME</code>, a parent directory, or anything outside the workspace. Use
+          <code>glob</code> and <code>grep</code>, or scope the command to the project. This guard
+          removed the 229s <code>find /</code> that used to dominate a run.
+        </dd>
+      </div>
+      <div>
+        <dt>Tokens are higher than expected</dt>
+        <dd>
+          Check <code>/toolset</code> and <code>/cost</code>. The default <code>auto</code> profile
+          adds capabilities when the prompt implies them; <code>minimal</code> or
+          <code>coding</code> keeps the nine-tool registry. Orchestration tools are attached when
+          the orchestrator is on — <code>orchestrator: false</code> is the lean path.
+        </dd>
+      </div>
+      <div>
+        <dt>A custom agent never runs</dt>
+        <dd>
+          Check <code>wombat agent list</code> to see which definition Wombat resolves, then select
+          it with <code>/agents</code> or <code>--agents</code>. A <code>readonly</code> agent
+          cannot write, chat mode forces every agent read-only, and a definition with
+          <code>permissions: &#123; "write": "deny" &#125;</code> will never produce a patch.
+        </dd>
+      </div>
+      <div>
+        <dt>Skills do not show up</dt>
+        <dd>
+          Skills are markdown files in <code>~/.wombat/skills/&lt;name&gt;.md</code> or
+          <code>.wombat/skills/&lt;name&gt;.md</code>. The project copy wins on a name clash.
+          <code>/skill</code> lists what Wombat found; a skill is only used when an agent names it.
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>MCP and previews</h2>
+    <dl class="faq">
+      <div>
+        <dt>An MCP server will not start</dt>
+        <dd>
+          <code>wombat mcp test &lt;name&gt;</code> connects, lists tools and prints the server's
+          stderr. The startup timeout is 15s — use <code>--timeout 60</code> for a slow first
+          <code>npx</code> download. Remote endpoints must be HTTPS unless they are loopback.
+        </dd>
+      </div>
+      <div>
+        <dt>MCP tools are missing for workers</dt>
+        <dd>
+          Servers are lead-only unless added with <code>--workers</code>. A server added with
+          <code>--class read</code> is available to scouts without giving them write access.
+        </dd>
+      </div>
+      <div>
+        <dt>No preview bar appears</dt>
+        <dd>
+          The bar only appears after a tool reports a local URL such as
+          <code>http://localhost:5173</code>. <code>/previews</code> lists everything collected so
+          far, and <code>ctrl+o</code> opens the newest.
+        </dd>
+      </div>
+      <div>
+        <dt>An upgrade replaced my source build</dt>
+        <dd>
+          <code>wombat upgrade</code> installs the latest tag. Rebuild with
+          <code>go install github.com/ramsterr/Wombat/cmd/wombat@main</code> to move back to the
+          branch.
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Reset</h2>
+    <div class="codewrap">
+      <pre><code id="reset">mv ~/.wombat/config.json ~/.wombat/config.json.bak
+wombat setup
+
+# remove everything, including sessions and MCP logins
+rm -rf ~/.wombat</code></pre>
+      <button class="copy" type="button" data-copy="reset">copy</button>
+    </div>
+    <p>
+      Move the directory rather than deleting it if you might want the sessions back: the
+      transcripts are plain JSONL and readable without Wombat.
+    </p>
+  </section>
+</DocsLayout>

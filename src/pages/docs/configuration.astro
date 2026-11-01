@@ -1,0 +1,194 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+
+const uiJson = `{
+  "theme": "tokyo",
+  "mouse": false,
+  "panel": true,
+  "paint_background": true
+}`;
+---
+
+<DocsLayout
+  title="Configuration — Wombat docs"
+  description="Wombat config file reference: providers, models, fallback models, permission gates, tool profile, research mode, capabilities, orchestration limits and environment variables."
+  heading="Configuration"
+  lede="One JSON file at ~/.wombat/config.json, one key at a time from the CLI, and environment variables for the values you do not want on disk."
+>
+  <section>
+    <h2>The file and the commands</h2>
+    <p>
+      <code>wombat config</code> prints the resolved configuration with keys redacted.
+      <code>wombat config set</code> changes one value, validates it, and saves immediately.
+      <code>wombat setup</code> is the guided path for provider, key and model.
+    </p>
+    <div class="codewrap">
+      <pre><code id="config-basics">wombat config
+wombat config set provider anthropic
+wombat config set model claude-sonnet-4.5
+wombat config set fallback_models claude-haiku-4.5,gpt-5-mini
+wombat config set scout_model gpt-5-mini
+wombat config set theme gruvbox
+wombat config set mode create</code></pre>
+      <button class="copy" type="button" data-copy="config-basics">copy</button>
+    </div>
+    <div class="note">
+      <strong>Paths.</strong> <code>~/.wombat/config.json</code> holds settings,
+      <code>~/.wombat/sessions/</code> holds JSONL transcripts per project,
+      <code>~/.wombat/mcp-auth/</code> holds OAuth tokens (mode <code>0600</code>), and
+      <code>~/.wombat/agents/</code> and <code>~/.wombat/skills/</code> hold custom agents and
+      skills. <code>WOMBAT_HOME</code> moves the directory, <code>WOMBAT_CONFIG</code> points at
+      a specific file.
+    </div>
+  </section>
+
+  <section>
+    <h2>Providers</h2>
+    <p>
+      Wombat speaks OpenAI-compatible chat completions, Anthropic, and OpenCode; anything that
+      presents an OpenAI-compatible base URL works, including a gateway in front of a local model.
+      Each provider entry stores its kind, base URL, optional API key and a model list.
+    </p>
+    <div class="codewrap">
+      <pre><code id="config-provider">wombat config set provider openai
+wombat config set model gpt-5
+wombat models openai          # list what the provider reports
+wombat doctor                 # one small request, with errors surfaced</code></pre>
+      <button class="copy" type="button" data-copy="config-provider">copy</button>
+    </div>
+    <p>
+      Keys can also come from the environment (<code>OPENAI_API_KEY</code>,
+      <code>ANTHROPIC_API_KEY</code>, and the variables your gateway expects), which keeps them
+      out of the file. <code>WOMBAT_PROVIDER</code> and <code>WOMBAT_MODEL</code> override the
+      selected provider and model for one process.
+    </p>
+  </section>
+
+  <section>
+    <h2>Permissions</h2>
+    <p>
+      Permissions are gates on classes of action, not on individual tools. Each gate is
+      <code>allow</code>, <code>ask</code> or <code>deny</code>; an MCP server can hold its own
+      gate that falls back to the global <code>mcp</code> value.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th scope="col">gate</th><th scope="col">default</th><th scope="col">covers</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>bash</code></td><td>allow</td><td>Shell commands, including <code>git</code>.</td></tr>
+          <tr><td><code>write</code></td><td>allow</td><td>Creating files and writing whole files.</td></tr>
+          <tr><td><code>edit</code></td><td>allow</td><td>Editing and patching existing files.</td></tr>
+          <tr><td><code>network</code></td><td>allow</td><td>Fetches and remote calls made by tools.</td></tr>
+          <tr><td><code>mcp</code></td><td>ask</td><td>Every MCP tool, unless overridden per server.</td></tr>
+          <tr><td><code>dangerous</code></td><td>ask</td><td>Commands flagged as destructive.</td></tr>
+          <tr><td><code>sensitive-read</code></td><td>ask</td><td>Credentials, keys and secret files.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="codewrap">
+      <pre><code id="config-perms">wombat config set permissions.bash ask
+wombat config set permissions.write ask
+wombat config set permissions.mcp allow
+wombat config set permissions.mcp:github deny</code></pre>
+      <button class="copy" type="button" data-copy="config-perms">copy</button>
+    </div>
+    <div class="note">
+      <strong>Defaults are permissive.</strong> The shipped config allows shell, write, edit and
+      network so the agent can finish a job without stopping. If you want to be consulted, set
+      the classes you care about to <code>ask</code> before the first run in an unfamiliar
+      repository. <code>--yolo</code> on <code>wombat run</code> auto-approves one run;
+      <code>/yolo</code> toggles the same thing in chat.
+    </div>
+  </section>
+
+  <section>
+    <h2>Model behaviour</h2>
+    <p>
+      Two settings decide how much of the harness the model sees, and they are the ones that move
+      token cost the most.
+    </p>
+    <div class="codewrap">
+      <pre><code id="config-profile">wombat config set tool_profile auto       # auto | minimal | coding | web | semantic | verify | media | orchestrator | full
+wombat config set research_mode auto      # auto | off | quick | standard | deep
+wombat config set capabilities.web auto   # auto | on | off
+wombat config set capabilities.semantic off
+wombat config set reasoning high          # off | low | medium | high | max</code></pre>
+      <button class="copy" type="button" data-copy="config-profile">copy</button>
+    </div>
+    <p>
+      <code>auto</code> inspects the prompt and loads matching capabilities. A task that mentions
+      a page or a screenshot gets <code>web</code>; a rename gets nothing extra. The
+      <a href="/docs/tools">tools &amp; profiles</a> guide has the full table.
+    </p>
+  </section>
+
+  <section>
+    <h2>Orchestration limits</h2>
+    <p>
+      The fleet is on by default. These keys cap it; every one of them defaults to a finite value,
+      and token budgets default to unlimited.
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">key</th><th scope="col">default</th><th scope="col">meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>orchestrator</code></td><td>true</td><td>Attach the planning and worker tools when the profile allows them.</td></tr>
+          <tr><td><code>max_parallel_scouts</code></td><td>5</td><td>Read-only workers running at once.</td></tr>
+          <tr><td><code>max_parallel_agents</code></td><td>5</td><td>Custom agents running at once.</td></tr>
+          <tr><td><code>max_parallel_writers</code></td><td>2</td><td>Workers that may change files, at once.</td></tr>
+          <tr><td><code>writer_max_steps</code></td><td>0</td><td>Per-run step cap for writers; 0 uses the session default.</td></tr>
+          <tr><td><code>worker_token_budget</code></td><td>0</td><td>Per-worker token cap; 0 is unlimited.</td></tr>
+          <tr><td><code>turn_worker_token_budget</code></td><td>0</td><td>Cap across all workers for one turn.</td></tr>
+          <tr><td><code>review_policy</code></td><td>always</td><td><code>always</code>, <code>auto</code> (skips docs-only patches) or <code>never</code>.</td></tr>
+          <tr><td><code>check_policy</code></td><td>auto</td><td>Where checks run: <code>auto</code>, <code>worktree</code>, <code>merge</code> or <code>both</code>.</td></tr>
+          <tr><td><code>keep_worktrees</code></td><td>false</td><td>Keep worktrees after the run for inspection.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Interface settings</h2>
+    <p>
+      Thinking display and reasoning level are settable from the CLI. Theme and the interface
+      toggles are not <code>config set</code> keys — set the theme with <code>/theme</code> in the
+      TUI (it is saved for you), or edit the file directly.
+    </p>
+    <div class="codewrap">
+      <pre><code id="config-ui">wombat config set show_thinking on
+wombat config set trim_reasoning on
+wombat config set reasoning high</code></pre>
+      <button class="copy" type="button" data-copy="config-ui">copy</button>
+    </div>
+    <div class="codewrap">
+      <pre><code id="config-ui-json">{uiJson}</code></pre>
+      <button class="copy" type="button" data-copy="config-ui-json">copy</button>
+    </div>
+    <p>
+      Themes, keys and the rest of the interface are in the <a href="/docs/cli">CLI reference</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Environment variables</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">variable</th><th scope="col">effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>WOMBAT_HOME</code></td><td>Move the whole <code>~/.wombat</code> directory.</td></tr>
+          <tr><td><code>WOMBAT_CONFIG</code></td><td>Use a specific config file.</td></tr>
+          <tr><td><code>WOMBAT_PROVIDER</code>, <code>WOMBAT_MODEL</code></td><td>Override the selected provider or model.</td></tr>
+          <tr><td><code>WOMBAT_CLASSIC</code></td><td>Force the classic interface.</td></tr>
+          <tr><td><code>EXA_API_KEY</code>, <code>TAVILY_API_KEY</code>, <code>BRAVE_API_KEY</code>, <code>SERPER_API_KEY</code></td><td>Use your own search accounts; keyless backends still work.</td></tr>
+          <tr><td><code>WOMBAT_LSP</code>, <code>WOMBAT_LSP_&lt;EXT&gt;</code></td><td>Point the semantic capability at a language server.</td></tr>
+          <tr><td><code>WOMBAT_TMP</code></td><td>Keep temporary files out of the project.</td></tr>
+          <tr><td><code>WOMBAT_IMAGE_*</code>, <code>WOMBAT_EMBED_*</code></td><td>Image and embedding provider credentials.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</DocsLayout>

@@ -1,0 +1,150 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+
+const mcpJson = `{
+  "mcp_servers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "class": "read"
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": { "Authorization": "Bearer \${CONTEXT7_API_KEY}" }
+    }
+  }
+}`;
+---
+
+<DocsLayout
+  title="MCP servers — Wombat docs"
+  description="Connect Model Context Protocol servers to Wombat: local stdio and remote HTTP/SSE, OAuth login, per-server permission gates, tool naming and imports."
+  heading="MCP servers"
+  lede="Wombat is an MCP client. Local stdio servers and remote HTTP/SSE servers both work, their tools appear as mcp__server__tool, and every server can hold its own permission gate."
+>
+  <section>
+    <h2>Add a server</h2>
+    <div class="codewrap">
+      <pre><code id="mcp-add"># local stdio
+wombat mcp add playwright -- npx -y @playwright/mcp@latest
+wombat mcp add github --env GITHUB_TOKEN=... -- \
+  npx -y @modelcontextprotocol/server-github
+
+# remote HTTP with a static token
+wombat mcp add context7 --url https://mcp.context7.com/mcp
+wombat mcp add github --url https://api.githubcopilot.com/mcp/ \
+  --header 'Authorization=Bearer &#36;&#123;GITHUB_TOKEN&#125;'</code></pre>
+      <button class="copy" type="button" data-copy="mcp-add">copy</button>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">flag</th><th scope="col">meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>--url</code></td><td>Remote endpoint. Must be HTTPS unless it is a loopback address.</td></tr>
+          <tr><td><code>--type</code> / <code>--transport</code></td><td><code>stdio</code>, <code>http</code> or <code>sse</code>.</td></tr>
+          <tr><td><code>--cwd</code></td><td>Working directory for a local server.</td></tr>
+          <tr><td><code>--env</code>, <code>--header</code></td><td>Environment or request headers, repeatable, with <code>&#36;&#123;VAR&#125;</code> expansion.</td></tr>
+          <tr><td><code>--class</code></td><td><code>mcp</code>, <code>read</code>, <code>network</code>, <code>write</code> or <code>edit</code> — the permission class for its tools.</td></tr>
+          <tr><td><code>--workers</code></td><td>Allow delegated workers to use this server's tools. Without it, the server is lead-only.</td></tr>
+          <tr><td><code>--timeout</code>, <code>--call-timeout</code></td><td>Startup timeout (default 15s) and per-call timeout in seconds.</td></tr>
+          <tr><td><code>--no-oauth</code></td><td>Disable interactive OAuth for a remote server.</td></tr>
+          <tr><td><code>--oauth-redirect</code>, <code>--oauth-client-id</code>, <code>--oauth-client-secret</code></td><td>Pre-registered OAuth client details.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Manage and inspect</h2>
+    <div class="codewrap">
+      <pre><code id="mcp-manage">wombat mcp list
+wombat mcp test [name...]      # connect, list tools, show stderr
+wombat mcp enable &lt;name&gt;
+wombat mcp disable &lt;name&gt;
+wombat mcp remove &lt;name&gt;
+wombat mcp import .mcp.json    # Claude/Cursor mcpServers, or OpenCode mcp.servers</code></pre>
+      <button class="copy" type="button" data-copy="mcp-manage">copy</button>
+    </div>
+    <p>
+      <code>test</code> is the first thing to run when a server misbehaves: it connects, lists
+      tools, and prints the server's own stderr. Use <code>--timeout 60</code> for a slow first
+      <code>npx</code> download and <code>--call-timeout 600</code> for slow tools.
+    </p>
+  </section>
+
+  <section>
+    <h2>OAuth</h2>
+    <div class="codewrap">
+      <pre><code id="mcp-oauth">wombat mcp add notion --url https://mcp.notion.com/mcp
+wombat mcp login notion
+wombat mcp test notion
+wombat mcp logout notion</code></pre>
+      <button class="copy" type="button" data-copy="mcp-oauth">copy</button>
+    </div>
+    <p>
+      Login opens the browser, completes a loopback callback with PKCE and state checks, and
+      stores access and refresh tokens in <code>~/.wombat/mcp-auth/</code> with
+      <code>0600</code> permissions. Tokens refresh automatically. Agent startup only uses
+      cached tokens and tells you to run <code>wombat mcp login &lt;server&gt;</code> when one is
+      missing. Logging out, updating or removing a server clears the saved login.
+    </p>
+    <p>
+      Use <code>"oauth": false</code> for API-key servers, or set
+      <code>oauth_client_id</code>, <code>oauth_client_secret</code>,
+      <code>oauth_scopes</code> and <code>oauth_redirect_url</code> for a pre-registered client.
+      Some providers only register approved clients; a PAT or a local server is the way around
+      that.
+    </p>
+  </section>
+
+  <section>
+    <h2>Config and permissions</h2>
+    <p>
+      Servers live under <code>mcp_servers</code> in <code>~/.wombat/config.json</code>:
+    </p>
+    <div class="codewrap">
+      <pre><code id="mcp-json">{mcpJson}</code></pre>
+      <button class="copy" type="button" data-copy="mcp-json">copy</button>
+    </div>
+    <p>
+      <code>&#36;&#123;VAR&#125;</code>, <code>&#36;&#123;VAR:-default&#125;</code> and
+      <code>&#123;env:VAR&#125;</code> expand when the
+      server starts, so secrets stay in the environment. MCP calls are gated by
+      <code>mcp:&lt;server&gt;</code>, falling back to <code>mcp</code>, which defaults to
+      <code>ask</code>.
+    </p>
+    <div class="codewrap">
+      <pre><code id="mcp-perms">wombat config set permissions.mcp allow
+wombat config set permissions.mcp:github ask</code></pre>
+      <button class="copy" type="button" data-copy="mcp-perms">copy</button>
+    </div>
+    <div class="note">
+      <strong>Local servers run as you, with your environment.</strong> Only add servers you
+      trust, and keep them at <code>ask</code> until you have watched them work. A
+      <code>--class read</code> server is the safe default for a delegated scout, and only
+      servers passed with <code>--workers</code> reach the fleet at all.
+    </div>
+  </section>
+
+  <section>
+    <h2>In chat</h2>
+    <p>
+      <code>/mcp</code> shows every attached server, its tools, its status and this session's call
+      counts. <code>/toolset</code> lists the tools the session can actually use, with the
+      permission gate for each.
+    </p>
+  </section>
+
+  <section>
+    <h2>Which servers are worth it</h2>
+    <p>
+      Add two or three, not seven. Every server puts its tool schemas in front of the model, and
+      past a point more tools makes the choice worse, not better. The
+      <a href="/mcp">MCP catalog</a> sorts servers by genre — code, design, art, docs, data and
+      ops — with the exact <code>wombat mcp add</code> line for each.
+    </p>
+  </section>
+</DocsLayout>

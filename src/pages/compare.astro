@@ -1,0 +1,407 @@
+---
+import Base from "../layouts/Base.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import Bars from "../components/charts/Bars.astro";
+import Cumulative from "../components/charts/Cumulative.astro";
+import {
+  eighteenTask,
+  tenTask,
+  tenTaskOrdinary,
+  tenTaskTotals,
+  method,
+  ratio,
+  seconds,
+  tokens,
+} from "../data/benchmarks";
+
+const lean = eighteenTask.rows[2];
+const standard = eighteenTask.rows[1];
+const pi = eighteenTask.rows[0];
+
+const suiteRows = [
+  {
+    label: "Pi 1.4.0",
+    sub: "18 / 18 tasks",
+    bars: [{ tone: "pi" as const, value: pi.seconds, display: seconds(pi.seconds) }],
+  },
+  {
+    label: "Wombat · default",
+    sub: "18 / 18 tasks",
+    bars: [{ tone: "wombat" as const, value: standard.seconds, display: seconds(standard.seconds) }],
+  },
+  {
+    label: "Wombat · lean",
+    sub: "18 / 18 tasks",
+    bars: [{ tone: "wombat" as const, value: lean.seconds, display: seconds(lean.seconds) }],
+  },
+];
+
+const taskRows = tenTask.tasks.map((task) => ({
+  label: task.task,
+  bars: [
+    {
+      tone: "wombat" as const,
+      value: task.wombat.seconds,
+      display: seconds(task.wombat.seconds),
+    },
+    {
+      tone: "pi" as const,
+      value: task.pi.seconds,
+      display: seconds(task.pi.seconds),
+      dashed: task.pi.timedOut,
+    },
+  ],
+}));
+
+const cumulative = tenTask.tasks.map((task) => ({
+  label: task.task,
+  wombat: task.wombat.seconds,
+  pi: task.pi.seconds,
+  piTimeout: task.pi.timedOut,
+}));
+
+const ordinaryRatioTime = tenTaskOrdinary.wombat.seconds / tenTaskOrdinary.pi.seconds;
+const ordinaryRatioInput = tenTaskOrdinary.wombat.input / tenTaskOrdinary.pi.input;
+
+const metrics = [
+  { label: "Tasks passed", wombat: "18 / 18", pi: "18 / 18", note: "tie" },
+  { label: "Total wall time", wombat: seconds(lean.seconds), pi: seconds(pi.seconds), note: `${ratio(pi.seconds, lean.seconds)} faster` },
+  { label: "Mean time / task", wombat: "7.4s", pi: "15.0s", note: `${ratio(pi.seconds, lean.seconds)} faster` },
+  { label: "Median time / task", wombat: "6.7s", pi: "8.0s", note: "1.19× faster" },
+  { label: "Prompt tokens", wombat: tokens(lean.input), pi: tokens(pi.input), note: "41% fewer" },
+  { label: "Uncached input", wombat: tokens(lean.uncached), pi: tokens(pi.uncached), note: "tied" },
+  { label: "Output tokens", wombat: tokens(lean.output), pi: tokens(pi.output), note: "11% fewer" },
+  { label: "Tool calls", wombat: String(lean.tools), pi: String(pi.tools), note: "9% fewer" },
+  { label: "Model steps", wombat: String(lean.steps), pi: String(pi.steps), note: "10% fewer" },
+];
+---
+
+<Base
+  title="Wombat vs Pi — benchmark comparison"
+  description="Head-to-head benchmarks: Wombat and Pi 1.4.0 on the same model, tasks, skill and MCP server. Total wall time, per-task results, token usage, method and limitations."
+>
+  <a class="skip" href="#main">Skip to content</a>
+  <Header active="compare" />
+
+  <main id="main">
+    <div class="wrap dochead">
+      <p class="crumb"><a href="/">home</a> / <span aria-current="page">vs pi</span></p>
+      <p class="eyebrow">benchmarks</p>
+      <h1>Wombat vs Pi, on the same model and the same tasks.</h1>
+      <p class="dochead__lede">
+        Two harnesses, identical prompts, one deterministic task suite. Wombat finishes the
+        18-task suite in <strong>133.6s</strong> to Pi's <strong>270.2s</strong>, passes every
+        check, and does it on fewer prompt tokens. The 10-task run adds the case Pi cannot
+        finish at all: bounded web research.
+      </p>
+    </div>
+
+    <div class="wrap">
+      <div class="stats">
+        <div class="stat">
+          <span class="stat__n">2.02×</span>
+          <span class="stat__k">faster across the 18-task suite</span>
+          <span class="stat__note">133.6s vs 270.2s total wall time</span>
+        </div>
+        <div class="stat">
+          <span class="stat__n">18 / 18</span>
+          <span class="stat__k">tasks passed, both agents</span>
+          <span class="stat__note">deterministic checks, not taste scores</span>
+        </div>
+        <div class="stat">
+          <span class="stat__n">41%</span>
+          <span class="stat__k">fewer prompt tokens</span>
+          <span class="stat__note">244.6k vs 416.3k, lean profile</span>
+        </div>
+        <div class="stat">
+          <span class="stat__n">10 / 10</span>
+          <span class="stat__k">on the 10-task run</span>
+          <span class="stat__note">Pi passed 9/10 and timed out on research</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="verdict">
+        <p>
+          <strong>The short version.</strong> Wombat is faster where the harness has to hold a
+          whole job: it plans, switches capabilities, and stops researching when the budget says
+          stop. Pi is the leaner machine on small, single-file work — the section below shows
+          exactly where. Both are honest results from the same suite.
+        </p>
+      </div>
+    </div>
+
+    <section class="cmp-section wrap" id="suite">
+      <h2>The 18-task suite</h2>
+      <p class="cmp-section__lede">
+        Same model for both agents, the same <code>AGENTS.md</code>, the same
+        bench skill, the same local MCP server, and the same Playwright install. Each task runs in
+        a fresh workspace and is scored by a deterministic check: exact bytes, a test result,
+        parsed JSON/XML, <code>ffprobe</code>, a browser token, or a pixel match.
+      </p>
+
+      <Bars
+        rows={suiteRows}
+        max={300}
+        caption="Total wall-clock time for all 18 tasks. Lower is better. The lean profile is Wombat with the minimal tool profile and orchestration off; the default profile keeps orchestration tools loaded."
+      />
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">metric</th>
+              <th scope="col" class="num">wombat · lean</th>
+              <th scope="col" class="num">pi 1.4.0</th>
+              <th scope="col">delta</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map((row) => (
+              <tr>
+                <td>{row.label}</td>
+                <td class="num num--wombat">{row.wombat}</td>
+                <td class="num num--pi">{row.pi}</td>
+                <td>{row.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="fineprint">
+        The default profile is <strong>168.2s</strong> and passes 18/18 as well. It carries the
+        orchestration tools, which cost about 2.6k schema tokens per request and pulled its input
+        to 554.7k. Lean is the profile to quote for speed; default is the profile that can run a
+        fleet.
+      </p>
+    </section>
+
+    <section class="cmp-section wrap" id="ten">
+      <h2>The 10-task run, task by task</h2>
+      <p class="cmp-section__lede">
+        Four simple tasks and six multi-step tasks. Both agents saw the same instructions, skill
+        content, MCP server and Playwright install.
+        Wall time is the agent process; the checks are excluded.
+      </p>
+
+      <Bars
+        rows={taskRows}
+        max={320}
+        labelWidth={188}
+        caption="Wall time per task. Pi's research bar is dashed: it hit the 300s timeout without writing answer.md."
+      />
+
+      <Cumulative
+        points={cumulative}
+        max={440}
+        caption="Cumulative wall time. The agents track each other through the ordinary tasks, then Pi spends 300s on research while Wombat finishes in 137s."
+      />
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">task</th>
+              <th scope="col" class="num">time</th>
+              <th scope="col" class="num">input tokens</th>
+              <th scope="col" class="num">steps</th>
+              <th scope="col" class="num">tools</th>
+              <th scope="col">result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tenTask.tasks.map((task) => (
+              <tr>
+                <td><code>{task.task}</code></td>
+                <td class="num">
+                  <span class="num--wombat">{seconds(task.wombat.seconds)}</span>
+                  <span aria-hidden="true"> / </span>
+                  <span class="num--pi">{seconds(task.pi.seconds)}</span>
+                </td>
+                <td class="num">
+                  {tokens(task.wombat.input)}
+                  <span aria-hidden="true"> / </span>
+                  {tokens(task.pi.input)}
+                </td>
+                <td class="num">{task.wombat.steps} / {task.pi.steps}</td>
+                <td class="num">{task.wombat.tools} / {task.pi.tools}</td>
+                <td>
+                  <span class="pill pill--pass">Y</span>
+                  <span class="pill" class:list={{ "pill--fail": !task.pi.passed }}>{task.pi.passed ? "Y" : "N"}</span>
+                </td>
+              </tr>
+            ))}
+            <tr>
+              <td><strong>total</strong></td>
+              <td class="num"><strong>{seconds(tenTaskTotals.wombat.seconds)} / {seconds(tenTaskTotals.pi.seconds)}</strong></td>
+              <td class="num"><strong>{tokens(tenTaskTotals.wombat.input)} / {tokens(tenTaskTotals.pi.input)}</strong></td>
+              <td class="num"><strong>{tenTaskTotals.wombat.steps} / {tenTaskTotals.pi.steps}</strong></td>
+              <td class="num"><strong>{tenTaskTotals.wombat.tools} / {tenTaskTotals.pi.tools}</strong></td>
+              <td><strong>{tenTaskTotals.wombat.passed}/10 · {tenTaskTotals.pi.passed}/10</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fineprint">Values are Wombat / Pi. Steps are model requests; tools are tool calls.</p>
+
+      <div class="caveat">
+        <h3>The research task is the whole difference</h3>
+        <p>
+          Wombat loaded the web capability, ran two searches, was stopped by the quick-mode soft
+          budget with a clear "synthesize now", and wrote a sourced 205-line <code>answer.md</code>
+          in 136.8s. Pi's default toolset has no search: it made <strong>35 bash calls</strong>,
+          accumulated <strong>612k input tokens</strong>, hit the 300s timeout, and never wrote the
+          file.
+        </p>
+        <p>
+          That failure is one observation from one run, but the mechanism is not subtle. A harness
+          without a research tool cannot finish a research task by shelling out faster.
+        </p>
+      </div>
+    </section>
+
+    <section class="cmp-section wrap" id="caveats">
+      <h2>Where Pi is still leaner</h2>
+      <p class="cmp-section__lede">
+        Strip out the failed research task and Pi is the lighter harness on ordinary coding work.
+        Wombat's system prompt, tool schemas and orchestration context cost tokens on every
+        request, and that shows up on small tasks. This is the part a benchmark page usually
+        leaves out; it is the part that tells you which agent to reach for.
+      </p>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">nine ordinary tasks</th>
+              <th scope="col" class="num">wombat</th>
+              <th scope="col" class="num">pi</th>
+              <th scope="col" class="num">wombat / pi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Input tokens</td><td class="num num--wombat">{tokens(tenTaskOrdinary.wombat.input)}</td><td class="num num--pi">{tokens(tenTaskOrdinary.pi.input)}</td><td class="num">{ordinaryRatioInput.toFixed(2)}×</td></tr>
+            <tr><td>Output tokens</td><td class="num num--wombat">{tokens(tenTaskOrdinary.wombat.output)}</td><td class="num num--pi">{tokens(tenTaskOrdinary.pi.output)}</td><td class="num">{(tenTaskOrdinary.wombat.output / tenTaskOrdinary.pi.output).toFixed(2)}×</td></tr>
+            <tr><td>Tool calls</td><td class="num num--wombat">{tenTaskOrdinary.wombat.tools}</td><td class="num num--pi">{tenTaskOrdinary.pi.tools}</td><td class="num">{(tenTaskOrdinary.wombat.tools / tenTaskOrdinary.pi.tools).toFixed(2)}×</td></tr>
+            <tr><td>Model steps</td><td class="num num--wombat">{tenTaskOrdinary.wombat.steps}</td><td class="num num--pi">{tenTaskOrdinary.pi.steps}</td><td class="num">{(tenTaskOrdinary.wombat.steps / tenTaskOrdinary.pi.steps).toFixed(2)}×</td></tr>
+            <tr><td>Wall time</td><td class="num num--wombat">{seconds(tenTaskOrdinary.wombat.seconds)}</td><td class="num num--pi">{seconds(tenTaskOrdinary.pi.seconds)}</td><td class="num">{ordinaryRatioTime.toFixed(2)}×</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fineprint">
+        Pi was faster on 7 of those 9 tasks. Wombat won <code>bugfix_tests</code> (9.9s vs 22.0s)
+        and <code>cli_json</code> (12.3s vs 18.8s). On the 18-task suite the median is 6.7s vs
+        8.0s in Wombat's favour, so the result depends on which suite and which profile you ask
+        about — quote both, or quote neither.
+      </p>
+    </section>
+
+    <section class="cmp-section wrap" id="why">
+      <h2>What actually changed</h2>
+      <p class="cmp-section__lede">
+        The speed is not a rewrite of the model loop. It is four harness decisions, each measured
+        before it shipped.
+      </p>
+
+      <div class="guides">
+        <article class="guide">
+          <span class="guide__n">01</span>
+          <h3>Capability profiles</h3>
+          <p>
+            Prompt telemetry showed <strong>~71%</strong> of the first request was tool schemas:
+            38–39 tools on every task. The default coding profile now exposes nine tools and
+            loads web, LSP, verify or media only when the task asks for them.
+          </p>
+          <span class="guide__go">→ /docs/tools</span>
+        </article>
+        <article class="guide">
+          <span class="guide__n">02</span>
+          <h3>A search guard</h3>
+          <p>
+            One <code>find / -iname</code> cost 229s in the old suite. Bash now rejects searches
+            outside the workspace before the process starts, and the system prompt points at
+            <code>glob</code> and <code>grep</code>.
+          </p>
+          <span class="guide__go">→ /docs/tools</span>
+        </article>
+        <article class="guide">
+          <span class="guide__n">03</span>
+          <h3>Bounded research</h3>
+          <p>
+            Quick mode gives 2 searches and 1 fetch, with a hard ceiling of 4/2. When the soft
+            budget is spent the model is told to synthesize, not to keep looping. The job prompt
+            went from 114.6s and 13 searches to 21.1s and 2.
+          </p>
+          <span class="guide__go">→ /docs/tools</span>
+        </article>
+        <article class="guide">
+          <span class="guide__n">04</span>
+          <h3>Optional orchestration</h3>
+          <p>
+            The fleet is powerful and expensive. Orchestration tools are attached only when the
+            orchestrator is enabled; <code>minimal</code> and <code>orchestrator: false</code>
+            give the lean path that wins the suite.
+          </p>
+          <span class="guide__go">→ /docs/agents</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="cmp-section wrap" id="method">
+      <h2>Method</h2>
+      <p class="cmp-section__lede">
+        Everything below is fixed in <code>eval/benchmarks/pi-vs-wombat</code>; the raw runs,
+        task prompts and chart scripts are in the repository. If a number here cannot be traced
+        to a file, treat it as wrong.
+      </p>
+      <ul class="method">
+        {method.map(([key, value]) => (
+          <li><b>{key}</b><span>{value}</span></li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="cmp-section wrap" id="limits">
+      <h2>Limitations</h2>
+      <div class="caveat">
+        <h3>Read this before quoting a number</h3>
+        <p>
+          <strong>One run per task.</strong> There is no variance estimate. The Pi research
+          timeout is a single observation, though the failure mode is structural, not luck.
+        </p>
+        <p>
+          <strong>Different models per suite.</strong> The 10-task run used a paid fallback
+          model because the default was rate-limited that day. The 18-task suite used the
+          default. Do not compare tokens across the two suites.
+        </p>
+        <p>
+          <strong>No delegation exercised.</strong> Every task recorded one agent run. This
+          measures the single-agent path, not the worker fleet.
+        </p>
+        <p>
+          <strong>Checks, not quality scores.</strong> The research check requires five known
+          company names and a remote-India mention. It does not judge the prose.
+        </p>
+      </div>
+    </section>
+
+    <section class="cmp-section wrap" id="raw">
+      <h2>Raw data</h2>
+      <p class="cmp-section__lede">
+        Reproduce any chart on this page from the repository. The site reads the same numbers
+        from <code>src/data/benchmarks.ts</code>; the charts are drawn in SVG here, not copied
+        from the eval assets.
+      </p>
+      <div class="codewrap">
+        <pre><code>eval/benchmarks/pi-vs-wombat/results.json              # 18-task, per task
+eval/benchmarks/pi-vs-wombat/EFFICIENCY.md             # phases 0-3, suite tables
+eval/benchmarks/pi-vs-wombat/efficienty-10/results.json # 10-task, per task
+eval/benchmarks/pi-vs-wombat/efficienty-10/README.md    # full write-up</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>

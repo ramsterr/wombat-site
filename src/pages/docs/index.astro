@@ -1,0 +1,103 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+import { docsNav } from "../../data/nav";
+---
+
+<DocsLayout
+  title="Wombat documentation"
+  description="Wombat is a general-purpose terminal agent: one Go binary, nine-tool coding profile, optional web, semantic, verify and media capabilities, parallel workers, MCP servers and bounded research."
+  heading="Documentation"
+  lede="Wombat is a general-purpose agent that runs in your terminal. One binary, no runtime, and a harness built around doing the whole job: edit, run, verify, browse, research, and hand back when it is done."
+>
+  <section>
+    <h2>What ships in the box</h2>
+    <p>
+      The default experience is a chat UI with a framed inspector, a live footer and a command
+      palette. Under it is a single agent loop with a small tool registry that grows only when the
+      task needs more reach.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th scope="col">area</th><th scope="col">what you get</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Editing</td><td>Read, write, edit and atomic multi-file patches, with exact-bytes handling for CRLF and UTF-8 files.</td></tr>
+          <tr><td>Shell</td><td><code>bash</code> with a 30s default timeout for foreground work, background jobs, and a guard that rejects searches outside the workspace.</td></tr>
+          <tr><td>Git</td><td><code>bash git</code>. Dedicated git tools were removed, and checkpoints use a private shadow repo.</td></tr>
+          <tr><td>Verification</td><td><code>verify</code>, the browser tool, and project checks; a writer's patch must pass checks before it merges.</td></tr>
+          <tr><td>Web</td><td>Search across several engines, page fetch with readable-text extraction, and image search — loaded as capabilities, not always-on.</td></tr>
+          <tr><td>Research</td><td>Quick, standard and deep modes with soft budgets and a hard ceiling, plus one bounded extension request.</td></tr>
+          <tr><td>Fleet</td><td>Lead plus scouts and writers in git worktrees, a dependency-graph plan scheduler, and resumable workers.</td></tr>
+          <tr><td>Sessions</td><td>Resumable JSONL transcripts scoped to a directory, checkpoints you can restore, and project references.</td></tr>
+          <tr><td>MCP</td><td>Local stdio and remote HTTP/SSE servers, per-server permission gates, and OAuth with PKCE and token refresh.</td></tr>
+          <tr><td>Agents</td><td>Custom specialists with their own prompt, tools, permissions, MCP servers, skills and model.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Start here</h2>
+    <div class="guides">
+      {docsNav.slice(1).map((item, index) => (
+        <a class="guide" href={item.href}>
+          <span class="guide__n">{String(index + 1).padStart(2, "0")}</span>
+          <h3>{item.label}</h3>
+          <p>{item.summary}</p>
+          <span class="guide__go">open guide →</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section>
+    <h2>The shape of the harness</h2>
+    <p>
+      Three ideas explain most of the behaviour you will see, including the benchmark numbers on
+      the <a href="/compare">comparison page</a>.
+    </p>
+
+    <h3>1. Tools are a budget, not a feature list</h3>
+    <p>
+      Every exposed tool contributes its JSON schema to every request. When Wombat exposed 38–39
+      tools, roughly 71% of the first prompt was tool schemas. The default <code>coding</code>
+      profile now exposes nine, and <code>tool_search</code> /
+      <code>request_capability</code> let the model pull in web, semantic, verify or media tools
+      mid-run. See <a href="/docs/tools">tools &amp; profiles</a>.
+    </p>
+
+    <h3>2. Research is bounded</h3>
+    <p>
+      A research loop that never ends is worse than a slightly shallow answer. Quick mode allows
+      two searches and one fetch, standard five and three, deep ten and six, each with a hard
+      ceiling. When the soft budget is spent, the next call returns "synthesize now" instead of
+      another page.
+    </p>
+
+    <h3>3. Parallel work is explicit</h3>
+    <p>
+      The lead plans a ledger, scouts and writers run in isolated worktrees, dependent steps
+      receive upstream reports, and a patch must pass its checks before merge. Nothing about the
+      fleet is implicit: if the plan has one step, the run is one agent. See
+      <a href="/docs/agents">agents &amp; orchestration</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Version and status</h2>
+    <p>
+      The latest tag is <strong>v0.2.6</strong>; <code>main</code> carries the unreleased work
+      covered here — custom agents, the skills browser, capability profiles, bounded research,
+      nine-tool coding profile, and the rebuilt opentui interface. Where this site says
+      "current", it means <code>main</code> after that tag.
+    </p>
+    <div class="codewrap">
+      <pre><code id="check-version">wombat version
+wombat doctor
+wombat config</code></pre>
+      <button class="copy" type="button" data-copy="check-version">copy</button>
+    </div>
+  </section>
+</DocsLayout>

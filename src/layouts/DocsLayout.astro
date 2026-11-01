@@ -1,0 +1,102 @@
+---
+import Base from "../layouts/Base.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { docsNav } from "../data/nav";
+
+interface Props {
+  title: string;
+  description: string;
+  heading: string;
+  lede?: string;
+}
+
+const { title, description, heading, lede } = Astro.props;
+
+const path = Astro.url.pathname.replace(/\/+$/, "") || "/docs";
+const index = docsNav.findIndex((item) => item.href === path);
+const prev = index > 0 ? docsNav[index - 1] : undefined;
+const next = index >= 0 && index < docsNav.length - 1 ? docsNav[index + 1] : undefined;
+const current = docsNav[index];
+---
+
+<Base title={title} description={description}>
+  <a class="skip" href="#main">Skip to content</a>
+  <Header active="docs" />
+
+  <main id="main">
+    <div class="dochead wrap">
+      <p class="crumb"><a href="/docs">docs</a> / <span aria-current="page">{current?.label ?? "docs"}</span></p>
+      <h1>{heading}</h1>
+      {lede && <p class="dochead__lede">{lede}</p>}
+    </div>
+
+    <div class="docs wrap">
+      <aside class="side">
+        <p class="side__title">guides</p>
+        <nav aria-label="Documentation">
+          <ol>
+            {docsNav.map((item) => (
+              <li><a href={item.href} aria-current={item.href === path ? "true" : undefined}>{item.label}</a></li>
+            ))}
+          </ol>
+        </nav>
+        <p class="side__foot">Matched to <code>main</code> after v0.2.6.</p>
+        <p class="side__foot"><a href="/compare">Benchmarks →</a></p>
+        <p class="side__foot"><a href="/mcp">MCP catalog →</a></p>
+      </aside>
+
+      <div class="doc">
+        <slot />
+      </div>
+    </div>
+
+    {(prev || next) && (
+      <nav class="pager wrap" aria-label="Guide pages">
+        {prev ? (
+          <a class="pager__link" href={prev.href}>
+            <span class="pager__dir">← previous</span>
+            <span class="pager__name">{prev.label}</span>
+          </a>
+        ) : <span />}
+        {next ? (
+          <a class="pager__link pager__link--next" href={next.href}>
+            <span class="pager__dir">next →</span>
+            <span class="pager__name">{next.label}</span>
+          </a>
+        ) : <span />}
+      </nav>
+    )}
+  </main>
+
+  <Footer />
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>(".copy").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copy ?? "");
+        if (!target) return;
+        const text = target.textContent ?? "";
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          const field = document.createElement("textarea");
+          field.value = text;
+          field.setAttribute("readonly", "");
+          field.style.position = "fixed";
+          field.style.opacity = "0";
+          document.body.appendChild(field);
+          field.select();
+          document.execCommand("copy");
+          field.remove();
+        }
+        button.textContent = "copied";
+        button.dataset.done = "true";
+        window.setTimeout(() => {
+          button.textContent = "copy";
+          delete button.dataset.done;
+        }, 1600);
+      });
+    });
+  </script>
+</Base>
