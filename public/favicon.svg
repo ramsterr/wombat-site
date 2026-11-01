@@ -1,4 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" fill="#080706"/>
-  <text x="16" y="23" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="21" font-weight="700" fill="#F2B23E">W</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Wombat">
+  <rect width="32" height="32" rx="7" fill="#080706"/>
+  <g fill="#A6E22E" transform="translate(0 -0.8)">
+    <ellipse cx="18.5" cy="17.5" rx="9" ry="6.4"/>
+    <circle cx="9.8" cy="16.2" r="5.4"/>
+    <ellipse cx="5" cy="18.2" rx="2.6" ry="2"/>
+    <circle cx="11.2" cy="10" r="2.1"/>
+    <rect x="11.6" y="21.6" width="3.6" height="5.2" rx="1.6"/>
+    <rect x="19.4" y="21.6" width="3.6" height="5.2" rx="1.6"/>
+    <circle cx="27.6" cy="16.4" r="1.5"/>
+  </g>
+  <circle cx="7.7" cy="14.2" r="0.95" fill="#080706"/>
 </svg>
